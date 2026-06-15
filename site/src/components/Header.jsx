@@ -137,7 +137,7 @@ export default function Header() {
               onClick={(e) => { e.preventDefault(); navigateTo('home'); }}
               style={{ textDecoration: 'none' }}
             >
-              <span className="logo-text" style={{ fontWeight: '700', color: 'var(--primary-red)', fontSize: '20px' }}>
+              <span className="logo-text" style={{ fontWeight: '700', color: 'var(--primary-red)', fontSize: 'clamp(16px, 4vw, 20px)', whiteSpace: 'nowrap', letterSpacing: '-0.5px' }}>
                 Senior Anandam
               </span>
             </a>
@@ -199,6 +199,29 @@ export default function Header() {
               </li>
               <li><a href="#about" onClick={(e) => { e.preventDefault(); navigateTo('about'); }}>About Us</a></li>
               <li><a href="#help" onClick={(e) => { e.preventDefault(); setHelpFormOpen(true); }}>Need Help</a></li>
+              <li>
+                <a 
+                  href="https://senioranandam.in" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  Explore
+                  <span style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    backgroundColor: '#FFC107', 
+                    color: '#000', 
+                    borderRadius: '50%', 
+                    width: '18px', 
+                    height: '18px',
+                    padding: '3px'
+                  }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="19" x2="19" y2="5"></line><polyline points="10 5 19 5 19 14"></polyline></svg>
+                  </span>
+                </a>
+              </li>
             </ul>
           </nav>
 
@@ -342,6 +365,24 @@ export default function Header() {
             </li>
             <li style={{ padding: '12px 0' }}>
               <a href="#help" onClick={(e) => { e.preventDefault(); setHelpFormOpen(true); setIsMobileMenuOpen(false); }} style={{ textDecoration: 'none', color: 'var(--primary-red)', fontSize: '20px', fontWeight: '600', display: 'block' }}>Need Help</a>
+            </li>
+            <li style={{ padding: '12px 0' }}>
+              <a href="https://senioranandam.in" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'var(--primary-red)', fontSize: '20px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                Explore
+                <span style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  backgroundColor: '#FFC107', 
+                  color: '#fff', 
+                  borderRadius: '50%', 
+                  width: '24px', 
+                  height: '24px',
+                  padding: '4px'
+                }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="19" x2="19" y2="5"></line><polyline points="10 5 19 5 19 14"></polyline></svg>
+                </span>
+              </a>
             </li>
           </ul>
         </div>
