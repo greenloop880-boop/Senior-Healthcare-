@@ -181,7 +181,7 @@ export default function Header() {
                               boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
                               transition: 'box-shadow 0.2s, transform 0.2s',
                             }}>
-                              <img src={cat.image_url} alt={cat.title} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />
+                              <img src={cat.image_url} alt={cat.title} loading="lazy" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />
                               <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 60%)', zIndex: 1 }}></div>
                               <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', padding: '16px 12px', zIndex: 2, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
                                 <span style={{ fontSize: '14px', fontWeight: '700', color: '#fff', textAlign: 'center', lineHeight: '1.3', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>{cat.title}</span>
@@ -255,7 +255,7 @@ export default function Header() {
                             className={`desktop-search-result-item ${focusedSearchIndex === idx ? 'focused' : ''}`}
                             style={focusedSearchIndex === idx ? { backgroundColor: '#f0f0f0' } : {}}
                           >
-                            <img src={prod.image_url} alt={prod.title} />
+                            <img src={prod.image_url} alt={prod.title} loading="lazy" />
                             <div>
                               <div className="result-title">{prod.title}</div>
                               <div className="result-price">₹{prod.price}</div>
@@ -403,7 +403,7 @@ export default function Header() {
                     }}
                     style={{ display: 'flex', gap: '12px', padding: '12px 0', borderBottom: '1px solid #eee' }}
                   >
-                    <img src={prod.image_url} alt={prod.title} style={{ width: '50px', height: '50px', borderRadius: '4px', objectFit: 'cover' }} />
+                    <img src={prod.image_url} alt={prod.title} loading="lazy" style={{ width: '50px', height: '50px', borderRadius: '4px', objectFit: 'cover' }} />
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                       <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-dark)' }}>{prod.title}</div>
                       <div style={{ fontSize: '13px', color: 'var(--primary-red)', fontWeight: '600' }}>₹{prod.price}</div>

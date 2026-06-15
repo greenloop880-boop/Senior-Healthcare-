@@ -246,7 +246,7 @@ export default function ProductPage() {
               <div className="gallery-thumbnails">
                 {thumbnails.map((imgUrl, idx) => (
                   <div key={idx} className={`thumbnail-card ${activeImage === idx ? 'active' : ''}`} onClick={() => setActiveImage(idx)}>
-                    <img src={imgUrl} alt={`Thumbnail ${idx + 1}`} />
+                    <img src={imgUrl} alt={`Thumbnail ${idx + 1}`} loading="lazy" />
                   </div>
                 ))}
               </div>
@@ -482,11 +482,11 @@ export default function ProductPage() {
           : [banner1, banner2, banner3, banner4];
         
         return detailBanners.length > 0 && (
-          <div className="promotional-banners" style={{ display: 'flex', flexDirection: 'column', gap: 0, marginTop: '40px', marginBottom: '16px', borderRadius: 'var(--radius-md)', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
-            {detailBanners.map((url, idx) => (
-              <img key={idx} src={url} alt={`Feature Banner ${idx + 1}`} className="feature-banner-img" style={{ width: '100%', height: 'auto', display: 'block' }} />
-            ))}
-          </div>
+          <div className="feature-banners-section" style={{ marginTop: '24px', paddingBottom: '24px' }}>
+              {detailBanners.map((url, idx) => (
+                <img key={idx} src={url} alt={`Feature Banner ${idx + 1}`} className="feature-banner-img" loading="lazy" style={{ width: '100%', height: 'auto', display: 'block' }} />
+              ))}
+            </div>
         );
       })()}
 

@@ -39,6 +39,30 @@ export const AppProvider = ({ children }) => {
   React.useEffect(() => {
     async function loadData() {
       try {
+        const CACHE_KEY = 'senior_anandam_data_cache_v1';
+        const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in ms
+
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            if (parsed.timestamp && Date.now() - parsed.timestamp < CACHE_TTL && parsed.data) {
+              setAllProductsList(parsed.data.products || []);
+              setCategoriesList(parsed.data.categories || []);
+              setConcernsList(parsed.data.concerns || []);
+              setHeroBanners(parsed.data.heroBanners || []);
+              setHealthReviews(parsed.data.healthReviews || []);
+              setCommunityVideos(parsed.data.communityVideos || []);
+              setCustomerReviews(parsed.data.customerReviews || []);
+              if (parsed.data.announcement) setAnnouncementText(parsed.data.announcement);
+              setIsLoadingDynamicData(false);
+              return;
+            }
+          } catch (e) {
+            console.error('Cache parsing failed, fetching fresh data', e);
+          }
+        }
+
         const [prodRes, catRes, conRes, heroRes, hrRes, cvRes, crRes, annRes] = await Promise.all([
           supabase.from('products').select('*'),
           supabase.from('categories').select('*'),
@@ -49,24 +73,54 @@ export const AppProvider = ({ children }) => {
           supabase.from('customer_reviews').select('*').order('id'),
           supabase.from('announcements').select('*')
         ]);
+        
+        let products = [];
         if (prodRes.data) {
-          const withDiscounts = prodRes.data.map(p => ({
+          products = prodRes.data.map(p => ({
             ...p,
             discount: (p.mrp > 0 && p.price < p.mrp)
               ? Math.round(((p.mrp - p.price) / p.mrp) * 100) + '% off'
               : ''
           }));
-          setAllProductsList(withDiscounts);
+          setAllProductsList(products);
         }
-        if (catRes.data) setCategoriesList(catRes.data);
-        if (conRes.data) setConcernsList(conRes.data);
-        if (heroRes.data) setHeroBanners(heroRes.data);
-        if (hrRes.data) setHealthReviews(hrRes.data);
-        if (cvRes.data) setCommunityVideos(cvRes.data);
-        if (crRes.data) setCustomerReviews(crRes.data);
-        if (annRes && annRes.data && annRes.data.length > 0) {
-          setAnnouncementText(annRes.data[0].text);
+        
+        const categories = catRes.data || [];
+        const concerns = conRes.data || [];
+        const banners = heroRes.data || [];
+        const hReviews = hrRes.data || [];
+        const cVideos = cvRes.data || [];
+        const cReviews = crRes.data || [];
+        const announcement = (annRes && annRes.data && annRes.data.length > 0) ? annRes.data[0].text : null;
+
+        setCategoriesList(categories);
+        setConcernsList(concerns);
+        setHeroBanners(banners);
+        setHealthReviews(hReviews);
+        setCommunityVideos(cVideos);
+        setCustomerReviews(cReviews);
+        if (announcement) setAnnouncementText(announcement);
+
+        // Save to cache
+        try {
+          const cacheData = {
+            timestamp: Date.now(),
+            data: {
+              products,
+              categories,
+              concerns,
+              heroBanners: banners,
+              healthReviews: hReviews,
+              communityVideos: cVideos,
+              customerReviews: cReviews,
+              announcement
+            }
+          };
+          localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+        } catch (e) {
+          console.error("Failed to save cache (quota exceeded?)", e);
         }
+
       } catch (e) {
         console.error('Error fetching data:', e);
       } finally {

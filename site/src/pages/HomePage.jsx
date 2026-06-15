@@ -135,7 +135,7 @@ export default function HomePage() {
               >
                 <picture>
                   <source media="(max-width: 768px)" srcSet={banner.mobile_image_url} />
-                  <img src={banner.image_url} alt="Senior Anandam Banner" className="hero-bg-img" />
+                  <img src={banner.image_url} alt="Senior Anandam Banner" className="hero-bg-img" loading={idx === 0 ? "eager" : "lazy"} />
                 </picture>
               </div>
             ))}
@@ -190,7 +190,7 @@ export default function HomePage() {
               }}
             >
               <div className="concern-image-wrapper">
-                <img src={concern.image_url} alt={concern.title} />
+                <img src={concern.image_url} alt={concern.title} loading="lazy" />
               </div>
               <div className="concern-title-box">
                 <h3 className="concern-title">{concern.title}</h3>
@@ -220,7 +220,7 @@ export default function HomePage() {
               >
                 <span className="category-card-title">{cat.title}</span>
                 <div className="category-card-img-wrapper">
-                  <img src={cat.image_url} alt={cat.title} className="category-card-img" />
+                  <img src={cat.image_url} alt={cat.title} className="category-card-img" loading="lazy" />
                 </div>
               </a>
             ))}
@@ -237,7 +237,7 @@ export default function HomePage() {
           {healthReviews.map((review, idx) => (
             <div className="health-card" key={idx}>
               <div className="health-card-img-wrapper">
-                <img src={review.image_url} alt={review.title} className="health-review-img" />
+                <img src={review.image_url} alt={review.title} className="health-review-img" loading="lazy" />
                 <span className="health-card-tag">{review.tag}</span>
               </div>
               <div className="health-card-content">
@@ -339,7 +339,7 @@ export default function HomePage() {
                   className="product-card-img-wrapper"
                   onClick={() => navigateTo('product-detail', { productId: prod.id })}
                 >
-                  <img src={prod.image_url} alt={prod.title} />
+                  <img src={prod.image_url} alt={prod.title} loading="lazy" />
                 </div>
                 <div className="product-card-content">
                   <h3
@@ -415,6 +415,7 @@ export default function HomePage() {
                       <img
                         src={`https://img.youtube.com/vi/${video.youtube_id}/hqdefault.jpg`}
                         alt={video.title}
+                        loading="lazy"
                         style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }}
                       />
                       <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '68px', height: '48px', backgroundColor: 'rgba(255, 0, 0, 0.9)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
@@ -472,7 +473,7 @@ export default function HomePage() {
                 key={idx}
                 onClick={() => setActiveReviewDetail(review)}
               >
-                <img src={review.bg_image_url} alt="Review Background" className="review-card-bg" />
+                <img src={review.bg_image_url} alt="Review Background" className="review-card-bg" loading="lazy" />
 
                 <button
                   className="expand-circle-btn"
@@ -515,6 +516,7 @@ export default function HomePage() {
             src={expertBanner}
             alt="Experts in Senior Care"
             className="experts-banner-image"
+            loading="lazy"
           />
         </div>
         <div className="experts-banner-content animate-fade">

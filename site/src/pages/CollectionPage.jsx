@@ -164,7 +164,7 @@ export default function CollectionPage() {
               }}
             >
               <div className="mobile-cat-icon">
-                <img src={concern.image_url} alt={concern.title} />
+                <img src={concern.image_url} alt={concern.title} loading="lazy" />
               </div>
               <span>{concern.title}</span>
             </div>
@@ -279,7 +279,7 @@ export default function CollectionPage() {
                     className="product-card-img-wrapper"
                     onClick={() => navigateTo('product-detail', { productId: prod.id })}
                   >
-                    <img src={prod.image_url} alt={prod.title} />
+                    <img src={prod.image_url} alt={prod.title} loading="lazy" />
                     {prod.id === 'wheelassist-lite' && (
                       <div className="warranty-badge-1 desktop-hide">
                         <span>1</span>

@@ -24,7 +24,8 @@ export const uploadToR2 = async (file, folder) => {
       Bucket: BUCKET,
       Key: filename,
       Body: new Uint8Array(arrayBuffer),
-      ContentType: file.type
+      ContentType: file.type,
+      CacheControl: 'public, max-age=31536000, immutable'
     }));
 
     return `${R2_PUBLIC_URL}/${filename}`;
