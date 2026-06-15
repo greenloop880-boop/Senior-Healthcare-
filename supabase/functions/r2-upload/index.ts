@@ -1,13 +1,12 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { S3Client, PutObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3.370.0";
-import { getSignedUrl } from "https://esm.sh/@aws-sdk/s3-request-presigner@3.370.0";
+import { S3Client, PutObjectCommand } from "npm:@aws-sdk/client-s3@3.370.0";
+import { getSignedUrl } from "npm:@aws-sdk/s3-request-presigner@3.370.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -43,7 +42,8 @@ serve(async (req) => {
     // URL expires in 5 minutes
     const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
 
-    const publicUrl = `${Deno.env.get('CLOUDFLARE_R2_PUBLIC_URL')}/${filename}`;
+    const PUBLIC_URL = Deno.env.get('CLOUDFLARE_R2_PUBLIC_URL') || 'https://pub-491acc29113c488184f9213225b80bba.r2.dev';
+    const publicUrl = `${PUBLIC_URL}/${filename}`;
 
     return new Response(
       JSON.stringify({ signedUrl, publicUrl }),

@@ -38,13 +38,20 @@ export default function DragDropImageUpload({ onFileSelect, required, label, rec
           }
         }
 
+        // PREVENT UPSCALING: If original image is smaller than target, keep original dimensions
+        if (img.width < targetWidth && img.height < targetHeight) {
+          targetWidth = img.width;
+          targetHeight = img.height;
+        }
+
         const canvas = document.createElement('canvas');
         canvas.width = targetWidth;
         canvas.height = targetHeight;
         const ctx = canvas.getContext('2d');
 
-        // Clear background
-        ctx.clearRect(0, 0, targetWidth, targetHeight);
+        // Clear background with white (prevents black background for transparent PNGs converted to JPEG/WebP)
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, targetWidth, targetHeight);
 
         // Calculate scaling to fit without trimming (object-fit: contain logic)
         const scale = Math.min(targetWidth / img.width, targetHeight / img.height);
@@ -55,16 +62,17 @@ export default function DragDropImageUpload({ onFileSelect, required, label, rec
 
         ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
 
+        // Export as WebP instead of AVIF. WebP is universally supported. AVIF falls back to massive PNGs!
         canvas.toBlob((blob) => {
           if (!blob) return;
           
-          const newFileName = file.name.replace(/\.[^/.]+$/, "") + ".avif";
-          const convertedFile = new File([blob], newFileName, { type: 'image/avif' });
+          const newFileName = file.name.replace(/\.[^/.]+$/, "") + ".webp";
+          const convertedFile = new File([blob], newFileName, { type: 'image/webp' });
           
           setFileName(newFileName);
           onFileSelect(convertedFile);
           setPreview(URL.createObjectURL(convertedFile));
-        }, 'image/avif', 0.9);
+        }, 'image/webp', 0.85);
       };
       img.src = e.target.result;
     };
