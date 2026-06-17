@@ -39,7 +39,7 @@ export const AppProvider = ({ children }) => {
   React.useEffect(() => {
     async function loadData() {
       try {
-        const CACHE_KEY = 'senior_anandam_data_cache_v1';
+        const CACHE_KEY = 'senior_anandam_data_cache_v7';
         const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in ms
 
         const cached = localStorage.getItem(CACHE_KEY);
@@ -74,10 +74,31 @@ export const AppProvider = ({ children }) => {
           supabase.from('announcements').select('*')
         ]);
         
+        const concernMapping = {
+          'ankle-brace': 'Joint Care',
+          'elastic-wrist': 'Joint Care',
+          'hinged-stabilizer': 'Joint Care',
+          'knee-sleeves': 'Joint Care',
+          'coccyx-cushion': 'Joint Care',
+          'lumbar-support': 'Joint Care',
+          'neck-pillow': 'Joint Care',
+          'massage-gun': 'Joint Care',
+          'nebulizer-machine': 'Lung Care',
+          'foldable-stick': 'Fall Prevention',
+          'folding-walker': 'Fall Prevention',
+          'folding-wheelchair': 'Fall Prevention',
+          'grab-bar': 'Fall Prevention',
+          'led-walking-stick': 'Fall Prevention',
+          'shower-chair': 'Fall Prevention',
+          'gut-probiotic': 'Gut Care',
+          'consti-calm': 'Gut Care'
+        };
+
         let products = [];
         if (prodRes.data) {
           products = prodRes.data.map(p => ({
             ...p,
+            concern_title: p.concern_title || concernMapping[p.id] || null,
             discount: (p.mrp > 0 && p.price < p.mrp)
               ? Math.round(((p.mrp - p.price) / p.mrp) * 100) + '% off'
               : ''

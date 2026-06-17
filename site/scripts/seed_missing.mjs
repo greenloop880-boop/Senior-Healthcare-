@@ -11,14 +11,14 @@ const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-const s3Client = new S3Client({
+const s3Client = process.env.CLOUDFLARE_R2_ACCESS_KEY_ID ? new S3Client({
   region: 'auto',
   endpoint: process.env.CLOUDFLARE_R2_ENDPOINT,
   credentials: {
     accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID,
     secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
   },
-});
+}) : null;
 
 const BUCKET = process.env.VITE_CLOUDFLARE_R2_BUCKET || 'storage';
 const PUBLIC_URL = process.env.VITE_CLOUDFLARE_R2_PUBLIC_URL;
@@ -70,7 +70,7 @@ const premiumCustomerReviews = [
 ];
 
 async function uploadImageToR2(imageUrl, folder) {
-  if (!imageUrl) return null;
+  if (!s3Client || !imageUrl) return imageUrl || null;
   console.log(`Downloading ${imageUrl}...`);
   const response = await fetch(imageUrl);
   const arrayBuffer = await response.arrayBuffer();

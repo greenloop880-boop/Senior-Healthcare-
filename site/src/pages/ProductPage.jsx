@@ -482,7 +482,7 @@ export default function ProductPage() {
           : [banner1, banner2, banner3, banner4];
         
         return detailBanners.length > 0 && (
-          <div className="feature-banners-section" style={{ marginTop: '24px', paddingBottom: '24px' }}>
+          <div className="feature-banners-section" style={{ marginTop: '24px', marginBottom: '24px' }}>
               {detailBanners.map((url, idx) => (
                 <img key={idx} src={url} alt={`Feature Banner ${idx + 1}`} className="feature-banner-img" loading="lazy" style={{ width: '100%', height: 'auto', display: 'block' }} />
               ))}

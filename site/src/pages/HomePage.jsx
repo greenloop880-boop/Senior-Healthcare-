@@ -173,6 +173,11 @@ export default function HomePage() {
         </section>
       )}
 
+      {/* SENIOR FIRST BANNER */}
+      <div className="senior-first-banner">
+        Senior First Science Backed
+      </div>
+
       {/* SHOP BY CONCERN */}
       <section className="section-container" id="concerns">
         <div className="section-heading-wrapper" style={{ paddingTop: '30px', paddingBottom: '10px' }}>
@@ -257,9 +262,9 @@ export default function HomePage() {
 
 
       {/* WHY INDIA TRUSTS Senior Anandam */}
-      <section className="section-container" id="trust-section" style={{ backgroundColor: '#F9F9F9', paddingTop: '48px', paddingBottom: '48px', marginTop: '20px' }}>
+      <section className="section-container" id="trust-section" style={{ backgroundColor: '#F9F9F9', paddingTop: '48px', paddingBottom: '48px', marginTop: '20px', marginBottom: '30px' }}>
         <div className="section-heading-wrapper" style={{ marginBottom: '40px', textAlign: 'center' }}>
-          <h2 className="section-heading" style={{ color: 'var(--text-dark)', fontSize: '32px', textTransform: 'uppercase', letterSpacing: '1px' }}>WHY INDIA TRUSTS Senior Anandam?</h2>
+          <h2 className="section-heading" style={{ color: 'var(--text-dark)', fontSize: '32px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>WHY INDIA TRUSTS Senior Anandam?</h2>
         </div>
         <div className="trust-grid">
           <div className="trust-card">
@@ -326,10 +331,10 @@ export default function HomePage() {
         </div>
 
         <div className="products-slider-container">
-          {(groupedProducts[activeBestSellersTab] || []).length >= 5 && (
+          {(groupedProducts[activeBestSellersTab] || []).length > 1 && (
             <>
-              <button className="slider-arrow-btn left" onClick={() => scrollProducts('left')} aria-label="Scroll products left">❮</button>
-              <button className="slider-arrow-btn right" onClick={() => scrollProducts('right')} aria-label="Scroll products right">❯</button>
+              <button className="slider-arrow-btn left" onClick={() => scrollProducts('left')} aria-label="Scroll products left"><ArrowIcon direction="left" /></button>
+              <button className="slider-arrow-btn right" onClick={() => scrollProducts('right')} aria-label="Scroll products right"><ArrowIcon direction="right" /></button>
             </>
           )}
           <div className="products-slider-track" ref={productsScrollRef}>

@@ -1,26 +1,27 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import dotenv from 'dotenv';
 import path from 'path';
-import { IMAGES, PRODUCTS_DATA, BLOGS_DATA } from '../src/config/images.js';
+import { IMAGES, PRODUCTS_DATA } from '../src/config/images.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY;
 
-const s3Client = new S3Client({
+const s3Client = process.env.CLOUDFLARE_R2_ACCESS_KEY_ID ? new S3Client({
   region: 'auto',
   endpoint: process.env.CLOUDFLARE_R2_ENDPOINT,
   credentials: {
     accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID,
     secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
   },
-});
+}) : null;
 
 const R2_PUBLIC_URL = process.env.VITE_CLOUDFLARE_R2_PUBLIC_URL;
 const BUCKET = process.env.VITE_CLOUDFLARE_R2_BUCKET || 'storage';
 
 async function uploadToR2(imageUrl, folder) {
+  if (!s3Client) return imageUrl;
   try {
     const filename = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
     const response = await fetch(imageUrl);
@@ -103,21 +104,7 @@ async function seed() {
     }
   }
 
-  console.log('Seeding Blogs...');
-  for (const blog of BLOGS_DATA) {
-    console.log(`Uploading image for blog: ${blog.title}`);
-    const r2Url = await uploadToR2(blog.image, 'blogs');
-    await insertData('blogs', {
-      id: blog.id,
-      title: blog.title,
-      summary: blog.summary,
-      date: blog.date,
-      read_time: blog.readTime,
-      author: blog.author,
-      image_url: r2Url,
-      content: blog.content
-    });
-  }
+
 
   console.log('--- Seeding Completed! ---');
 }

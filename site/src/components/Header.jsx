@@ -118,7 +118,7 @@ export default function Header() {
           <div className="marquee-content" dangerouslySetInnerHTML={{ __html: announcementText }} />
         </div>
 
-        <div className="navbar-container" style={{ padding: '12px 24px' }}>
+        <div className="navbar-container">
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <button
               className="icon-btn mobile-menu-toggle"
@@ -200,21 +200,21 @@ export default function Header() {
               <li><a href="#about" onClick={(e) => { e.preventDefault(); navigateTo('about'); }}>About Us</a></li>
               <li><a href="#help" onClick={(e) => { e.preventDefault(); setHelpFormOpen(true); }}>Need Help</a></li>
               <li>
-                <a 
-                  href="https://senioranandam.in" 
-                  target="_blank" 
+                <a
+                  href="https://senioranandam.in"
+                  target="_blank"
                   rel="noopener noreferrer"
                   style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
                   Explore
-                  <span style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                    backgroundColor: '#FFC107', 
-                    color: '#000', 
-                    borderRadius: '50%', 
-                    width: '18px', 
+                  <span style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#FFC107',
+                    color: '#000',
+                    borderRadius: '50%',
+                    width: '18px',
                     height: '18px',
                     padding: '3px'
                   }}>
@@ -369,14 +369,14 @@ export default function Header() {
             <li style={{ padding: '12px 0' }}>
               <a href="https://senioranandam.in" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'var(--primary-red)', fontSize: '20px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 Explore
-                <span style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  backgroundColor: '#FFC107', 
-                  color: '#fff', 
-                  borderRadius: '50%', 
-                  width: '24px', 
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#FFC107',
+                  color: '#fff',
+                  borderRadius: '50%',
+                  width: '24px',
                   height: '24px',
                   padding: '4px'
                 }}>
