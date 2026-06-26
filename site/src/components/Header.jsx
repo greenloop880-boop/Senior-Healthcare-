@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SearchIcon, UserIcon, CartIcon, ChevronDownIcon, CloseIcon, ArrowIcon } from './Icons';
+import { supabase } from '../config/supabaseClient';
+import { useQuery } from '@tanstack/react-query';
 
 import { useAppContext } from '../context/AppContext';
+import logoImg from '../assets/logo.png';
 
 export default function Header() {
   const {
@@ -12,18 +15,71 @@ export default function Header() {
     cart,
     setHelpFormOpen,
     searchQuery, setSearchQuery,
-    allProductsList, categoriesList, groupedProducts,
-    announcementText, performSearch,
-    currentPage
+    currentPage,
+    userSession, showToast
   } = useAppContext();
 
   const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginOtp, setLoginOtp] = useState('');
+  const [loginStep, setLoginStep] = useState('EMAIL'); // 'EMAIL' | 'OTP'
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
   const [megaScrollOffset, setMegaScrollOffset] = useState(0);
   const [isMobileCategoriesOpen, setIsMobileCategoriesOpen] = useState(false);
   const megaMenuRef = useRef(null);
   const searchRef = useRef(null);
   const mobileSearchRef = useRef(null);
+  const headerRef = useRef(null);
+
+  useEffect(() => {
+    if (!headerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        document.documentElement.style.setProperty('--header-height', `${entry.target.offsetHeight}px`);
+      }
+    });
+    observer.observe(headerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const handleGetOtp = async () => {
+    if (!loginEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail)) {
+      showToast("Please enter a valid email address.");
+      return;
+    }
+    setIsLoggingIn(true);
+    const { error } = await supabase.auth.signInWithOtp({ email: loginEmail });
+    setIsLoggingIn(false);
+    if (error) {
+      showToast(error.message);
+    } else {
+      showToast("OTP sent to your email!");
+      setLoginStep('OTP');
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!loginOtp || loginOtp.length < 6) {
+      showToast("Please enter a valid OTP.");
+      return;
+    }
+    setIsLoggingIn(true);
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: loginEmail,
+      token: loginOtp,
+      type: 'email'
+    });
+    setIsLoggingIn(false);
+    if (error) {
+      showToast(error.message);
+    } else if (data.session) {
+      showToast("Logged in successfully!");
+      setIsSignInModalOpen(false);
+      navigateTo('profile');
+    }
+  };
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -82,7 +138,52 @@ export default function Header() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  const searchResults = performSearch(debouncedSearchQuery).slice(0, 8); // Limit to 8
+  // TanStack Queries for Header Data
+  const { data: categoriesList = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data } = await supabase.from('categories').select('*').eq('is_active', true);
+      return (data || []).map(c => ({ ...c, title: c.name }));
+    }
+  });
+
+  const { data: announcementText = "<strong>IMPORTANT :</strong> Dear Customer, Senior Anandam never asks for additional payments, OTPs, bank details, or personal information over phone calls. If you receive any suspicious calls, please report: <strong>+91 9911789911</strong> or email: <strong>support@senioranandam.com</strong>" } = useQuery({
+    queryKey: ['announcements'],
+    queryFn: async () => {
+      const { data } = await supabase.from('announcements').select('*');
+      return (data && data.length > 0) ? data[0].text : undefined;
+    }
+  });
+
+  const { data: recommendedProducts = [] } = useQuery({
+    queryKey: ['recommendedProducts'],
+    queryFn: async () => {
+      const { data } = await supabase.from('products')
+        .select('id, name, skus(selling_price)')
+        .ilike('specs', '%__RECOMMENDED__%')
+        .limit(4);
+      return (data || []).map(p => {
+        const price = p.skus && p.skus.length > 0 ? Number(p.skus[0].selling_price) : 0;
+        return { ...p, title: p.name, price };
+      });
+    }
+  });
+
+  const { data: searchResults = [] } = useQuery({
+    queryKey: ['search', debouncedSearchQuery],
+    queryFn: async () => {
+      if (!debouncedSearchQuery.trim()) return [];
+      const { data } = await supabase.from('products')
+        .select('id, name, image_url, skus(selling_price)')
+        .ilike('name', `%${debouncedSearchQuery}%`)
+        .limit(8);
+      return (data || []).map(p => {
+        const price = p.skus && p.skus.length > 0 ? Number(p.skus[0].selling_price) : 0;
+        return { ...p, title: p.name, price };
+      });
+    },
+    enabled: debouncedSearchQuery.length > 0
+  });
 
   const handleSearchKeyDown = (e) => {
     if (e.key === 'ArrowDown') {
@@ -107,19 +208,19 @@ export default function Header() {
     }
   };
 
-  const recommendedProducts = allProductsList.filter(p => p.specs && p.specs.includes('__RECOMMENDED__'));
+  // recommendedProducts is now handled by useQuery above
 
   return (
     <>
       {/* NAVBAR */}
-      <header className="header-main" style={{ padding: 0, position: currentPage === 'home' ? 'absolute' : 'sticky', top: 0, left: 0, width: '100%', zIndex: 1000, transform: 'translateZ(0)' }}>
+      <header ref={headerRef} className="header-main" style={{ padding: 0, position: 'fixed', top: 0, left: 0, width: '100%', zIndex: 1000, transform: 'translateZ(0)' }}>
         {/* TOP ANNOUNCEMENT STRIP */}
         <div className="top-strip">
           <div className="marquee-content" dangerouslySetInnerHTML={{ __html: announcementText }} />
         </div>
 
         <div className="navbar-container">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div className="header-left">
             <button
               className="icon-btn mobile-menu-toggle"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -137,9 +238,7 @@ export default function Header() {
               onClick={(e) => { e.preventDefault(); navigateTo('home'); }}
               style={{ textDecoration: 'none' }}
             >
-              <span className="logo-text" style={{ fontWeight: '700', color: 'var(--primary-red)', fontSize: 'clamp(16px, 4vw, 20px)', whiteSpace: 'nowrap', letterSpacing: '-0.5px' }}>
-                Senior Anandam
-              </span>
+              <img src={logoImg} alt="Senior Anandam Logo" style={{ height: '45px', objectFit: 'contain', transform: 'scale(1.4)', transformOrigin: 'left center' }} />
             </a>
           </div>
 
@@ -303,7 +402,16 @@ export default function Header() {
                 <SearchIcon />
               </button>
             )}
-            <button className="icon-btn" aria-label="Profile" onClick={() => navigateTo('profile')}>
+            <button className="icon-btn" aria-label="Profile" onClick={() => {
+              if (userSession) {
+                navigateTo('profile');
+              } else {
+                setLoginEmail('');
+                setLoginOtp('');
+                setLoginStep('EMAIL');
+                setIsSignInModalOpen(true);
+              }
+            }}>
               <UserIcon />
             </button>
             <div className="action-btn-wrapper">
@@ -326,6 +434,7 @@ export default function Header() {
           className={`mobile-nav-panel ${isMobileMenuOpen ? 'open' : ''}`}
           style={{ position: 'absolute', top: '100%', left: 0, width: '85%', height: 'calc(100vh - 100%)', boxShadow: '2px 0 15px rgba(0,0,0,0.1)', overflowY: 'auto' }}
         >
+
           <ul className="mobile-nav-links" style={{ listStyle: 'none', padding: '0px 5px', margin: 0 }}>
             <li style={{ padding: '12px 0' }}>
               <a href="/" onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); navigateTo('home'); }} style={{ textDecoration: 'none', color: 'var(--primary-red)', fontSize: '20px', fontWeight: '600', display: 'block' }}>Home</a>
@@ -347,14 +456,14 @@ export default function Header() {
 
               {isMobileCategoriesOpen && (
                 <div className="mobile-dropdown-content" style={{ paddingLeft: '12px', marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {Object.keys(groupedProducts).map((catName) => (
+                  {categoriesList.map((cat) => (
                     <a
-                      key={catName}
+                      key={cat.title}
                       href="#products"
-                      onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); navigateTo('collection', { activeCategory: catName }); }}
+                      onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); navigateTo('collection', { activeCategory: cat.title }); }}
                       style={{ textDecoration: 'none', color: 'var(--text-dark)', fontSize: '16px', fontWeight: '500', display: 'block' }}
                     >
-                      {catName}
+                      {cat.title}
                     </a>
                   ))}
                 </div>
@@ -470,26 +579,57 @@ export default function Header() {
             </button>
             <h2 className="signin-title">Sign In</h2>
 
-            <div className="signin-form-group">
-              <label>Contact Number</label>
-              <input
-                type="text"
-                placeholder="Enter contact number to get started"
-                className="signin-input"
-              />
-            </div>
+            {loginStep === 'EMAIL' ? (
+              <>
+                <div className="signin-form-group">
+                  <label>Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="Enter email address to get started"
+                    className="signin-input"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                  />
+                </div>
 
-            <div className="signin-offer-banner">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--primary-red)">
-                <path d="M12 2l2.4 2.4 3.4-.7.7 3.4 2.4 2.4-1.6 3.1 1.6 3.1-2.4 2.4-.7 3.4-3.4-.7L12 22l-2.4-2.4-3.4.7-.7-3.4-2.4-2.4 1.6-3.1-1.6-3.1 2.4-2.4.7-3.4 3.4.7L12 2z" />
-                <text x="12" y="16.5" fill="#fff" fontSize="11" fontFamily="sans-serif" fontWeight="bold" textAnchor="middle">%</text>
-              </svg>
-              <span>Unlock amazing offers by logging in</span>
-            </div>
+                <div className="signin-offer-banner">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--primary-red)">
+                    <path d="M12 2l2.4 2.4 3.4-.7.7 3.4 2.4 2.4-1.6 3.1 1.6 3.1-2.4 2.4-.7 3.4-3.4-.7L12 22l-2.4-2.4-3.4.7-.7-3.4-2.4-2.4 1.6-3.1-1.6-3.1 2.4-2.4.7-3.4 3.4.7L12 2z" />
+                    <text x="12" y="16.5" fill="#fff" fontSize="11" fontFamily="sans-serif" fontWeight="bold" textAnchor="middle">%</text>
+                  </svg>
+                  <span>Unlock amazing offers by logging in</span>
+                </div>
 
-            <button className="signin-get-otp-btn" disabled>
-              Get OTP
-            </button>
+                <button className="signin-get-otp-btn" disabled={isLoggingIn} onClick={handleGetOtp}>
+                  {isLoggingIn ? 'Sending...' : 'Get OTP'}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="signin-form-group">
+                  <label>Enter OTP</label>
+                  <input
+                    type="text"
+                    placeholder=""
+                    className="signin-input"
+                    value={loginOtp}
+                    onChange={(e) => setLoginOtp(e.target.value)}
+                    maxLength={8}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '13px' }}>
+                  <span style={{ color: 'var(--text-gray)' }}>Sent to {loginEmail}</span>
+                  <button style={{ background: 'none', border: 'none', color: 'var(--primary-red)', cursor: 'pointer', fontWeight: '600' }} onClick={handleGetOtp} disabled={isLoggingIn}>
+                    Resend OTP
+                  </button>
+                </div>
+
+                <button className="signin-get-otp-btn" disabled={isLoggingIn} onClick={handleVerifyOtp} style={{ marginTop: '20px' }}>
+                  {isLoggingIn ? 'Verifying...' : 'Verify & Login'}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

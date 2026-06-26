@@ -22,7 +22,8 @@ body {
 
 .admin-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .admin-sidebar {
@@ -31,6 +32,7 @@ body {
   color: var(--text-light);
   display: flex;
   flex-direction: column;
+  height: 100vh;
 }
 
 .admin-sidebar-header {
@@ -38,12 +40,15 @@ body {
   font-size: 20px;
   font-weight: bold;
   border-bottom: 1px solid var(--sidebar-hover);
+  flex-shrink: 0;
 }
 
 .admin-nav {
   display: flex;
   flex-direction: column;
   padding: 16px 0;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .admin-nav-item {

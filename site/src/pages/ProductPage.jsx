@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDownIcon, StarIcon, UserIcon, CloseIcon } from '../components/Icons';
 
 import { useAppContext } from '../context/AppContext';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '../config/supabaseClient';
 import banner1 from '../assets/feature_banner_1.avif';
 import banner2 from '../assets/feature_banner_2.avif';
 import banner3 from '../assets/feature_banner_3.avif';
@@ -137,54 +139,114 @@ const renderHighlightIcon = (iconName) => {
 };
 
 export default function ProductPage() {
-  const { currentPageParams, allProductsList, navigateTo, addToCart, handleCheckout, showToast } = useAppContext();
+  const { currentPageParams, navigateTo, addToCart, setIsCheckoutModalOpen, setIsCartOpen, showToast } = useAppContext();
   const prodId = currentPageParams.productId;
-  const prod = allProductsList.find(p => p.id === prodId);
+  const queryClient = useQueryClient();
+
+  const getInitialProduct = () => {
+    if (!prodId) return undefined;
+    const homepageData = queryClient.getQueryData(['homepageProducts']);
+    if (homepageData && homepageData['All']) {
+      const p = homepageData['All'].find(p => p.id === prodId);
+      if (p) return p;
+    }
+    // Check collection cache
+    const collectionQueries = queryClient.getQueriesData({ queryKey: ['collectionProducts'] });
+    for (const [key, data] of collectionQueries) {
+      if (data && data.data) {
+        const p = data.data.find(p => p.id === prodId);
+        if (p) {
+          const price = p.skus && p.skus.length > 0 ? Number(p.skus[0].selling_price) : 0;
+          const mrp = p.skus && p.skus.length > 0 ? Number(p.skus[0].mrp) : 0;
+          return {
+            ...p,
+            title: p.name,
+            category_title: p.categories?.name || 'Other',
+            price, mrp,
+            discount: (mrp > 0 && price < mrp) ? Math.round(((mrp - price) / mrp) * 100) + '% off' : ''
+          };
+        }
+      }
+    }
+    return undefined;
+  };
+
+  const { data: prod, isLoading } = useQuery({
+    queryKey: ['product', prodId],
+    queryFn: async () => {
+      if (!prodId) return null;
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories ( name ),
+          skus ( id, sku_code, variant_name, selling_price, mrp ),
+          product_concerns ( concerns ( name ) )
+        `)
+        .eq('id', prodId)
+        .single();
+        
+      if (error || !data) return null;
+      
+      const p = data;
+      const defaultSku = p.skus && p.skus.length > 0 ? p.skus[0] : null;
+      const price = defaultSku ? Number(defaultSku.selling_price) : 0;
+      const mrp = defaultSku ? Number(defaultSku.mrp) : 0;
+      const category_title = p.categories ? p.categories.name : 'Uncategorized';
+      const concern_title = p.product_concerns && p.product_concerns.length > 0 && p.product_concerns[0].concerns
+                              ? p.product_concerns[0].concerns.name 
+                              : null;
+      return {
+        ...p,
+        title: p.name,
+        category_title,
+        concern_title,
+        price,
+        mrp,
+        discount: (mrp > 0 && price < mrp) ? Math.round(((mrp - price) / mrp) * 100) + '% off' : ''
+      };
+    },
+    initialData: getInitialProduct,
+    initialDataUpdatedAt: () => queryClient.getQueryState(['homepageProducts'])?.dataUpdatedAt,
+    enabled: !!prodId
+  });
+
   const catDetails = prod ? getCategoryDetails(prod.category_title, prod.title) : null;
 
 
-  // Extract variants from specs
-  const parsedVariants = [];
   const normalSpecs = [];
-  let parsedGallery = [];
   
   if (prod && prod.specs) {
     prod.specs.forEach(s => {
-      if (s.startsWith('__VARIANTS__:')) {
-        try {
-          const vConfig = JSON.parse(s.replace('__VARIANTS__:', ''));
-          if (Array.isArray(vConfig)) {
-            parsedVariants.push(...vConfig);
-          }
-        } catch (e) { console.error(e); }
-      } else if (s.startsWith('__GALLERY__:')) {
-        try {
-          parsedGallery = JSON.parse(s.replace('__GALLERY__:', ''));
-        } catch (e) { console.error(e); }
-      } else if (s !== '__RECOMMENDED__') {
+      if (s !== '__RECOMMENDED__' && !s.startsWith('__VARIANTS__:') && !s.startsWith('__GALLERY__:')) {
         normalSpecs.push(s);
       }
     });
   }
 
   const [qty, setQty] = useState(1);
-  const [selectedVariants, setSelectedVariants] = useState({});
+  const [selectedSku, setSelectedSku] = useState(null);
   const [pincode, setPincode] = useState("");
   const [activeImage, setActiveImage] = useState(0);
   const [openAccordion, setOpenAccordion] = useState(null);
 
   useEffect(() => {
-    // Initialize default variants
-    if (parsedVariants.length > 0 && Object.keys(selectedVariants).length === 0) {
-      const initial = {};
-      parsedVariants.forEach(v => {
-        if (v.options && v.options.length > 0) {
-          initial[v.label] = v.options[0];
-        }
-      });
-      setSelectedVariants(initial);
+    if (prod && prod.skus && prod.skus.length > 0) {
+      if (!selectedSku || !prod.skus.find(s => s.sku_code === selectedSku.sku_code)) {
+        setSelectedSku(prod.skus[0]);
+      }
+    } else {
+      setSelectedSku(null);
     }
-  }, [parsedVariants, selectedVariants]);
+  }, [prod, selectedSku]);
+
+  if (isLoading) {
+    return (
+      <div className="section-container" style={{ textAlign: 'center', padding: '80px 24px' }}>
+        <h3>Loading Product...</h3>
+      </div>
+    );
+  }
 
   if (!prod) {
     return (
@@ -198,20 +260,21 @@ export default function ProductPage() {
   const catName = prod.category_title || "All Products";
 
   const handleAddToCart = () => {
-    addToCart(prod, qty, selectedVariants);
+    addToCart(prod, qty, selectedSku);
   };
 
   const handleBuyNow = () => {
-    addToCart(prod, qty, selectedVariants);
-    handleCheckout();
+    addToCart(prod, qty, selectedSku);
+    setIsCartOpen(false);
+    setIsCheckoutModalOpen(true);
   };
 
   const toggleAccordion = (id) => {
     setOpenAccordion(openAccordion === id ? null : id);
   };
 
-  const validGallery = parsedGallery.filter(url => url && url.trim() !== '');
-  const thumbnails = [prod.image_url, ...validGallery];
+  const validGallery = (prod?.images || []).filter(url => typeof url === 'string' && url.trim() !== '');
+  const thumbnails = [prod.image_url, ...validGallery].filter(Boolean);
 
   return (
     <div className="product-detail-container animate-fade">
@@ -265,9 +328,13 @@ export default function ProductPage() {
           </div>
 
           <div className="price-block">
-            <span className="current-price">₹{prod.price}</span>
-            <span className="mrp-price">₹{prod.mrp}</span>
-            <span className="discount-green">{prod.discount}</span>
+            <span className="current-price">₹{selectedSku ? selectedSku.selling_price : prod.price}</span>
+            <span className="mrp-price">₹{selectedSku ? selectedSku.mrp : prod.mrp}</span>
+            <span className="discount-green">
+              {selectedSku && selectedSku.mrp > 0 && selectedSku.selling_price < selectedSku.mrp 
+                ? Math.round(((selectedSku.mrp - selectedSku.selling_price) / selectedSku.mrp) * 100) + '% off' 
+                : prod.discount}
+            </span>
           </div>
           <div className="tax-incl-text">(incl of all taxes)</div>
 
@@ -287,37 +354,51 @@ export default function ProductPage() {
             </div>
           </div>
 
-          {parsedVariants.length > 0 && (
+          {prod.skus && prod.skus.length > 1 && (
             <div className="product-variants-section" style={{ marginTop: '24px', marginBottom: '24px' }}>
-              {parsedVariants.map((v, idx) => (
-                <div key={idx} style={{ marginBottom: '16px' }}>
-                  <div style={{ fontSize: '15px', fontWeight: '500', marginBottom: '12px', color: '#111' }}>{v.label}</div>
-                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                    {v.options.map((opt, i) => {
-                      const isSelected = selectedVariants[v.label] === opt;
-                      return (
-                        <button
-                          key={i}
-                          onClick={() => setSelectedVariants(prev => ({ ...prev, [v.label]: opt }))}
-                          style={{
-                            padding: '8px 24px',
-                            borderRadius: '30px',
-                            border: `1px solid ${isSelected ? 'var(--primary-red)' : '#ccc'}`,
-                            backgroundColor: isSelected ? '#fef2f2' : '#fff',
-                            color: isSelected ? 'var(--primary-red)' : '#333',
-                            fontSize: '14px',
-                            fontWeight: isSelected ? '500' : '400',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease'
-                          }}
-                        >
-                          {opt}
-                        </button>
-                      );
-                    })}
-                  </div>
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '15px', fontWeight: '600', marginBottom: '12px', color: '#111' }}>Select Variant</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
+                  {prod.skus.map((sku, i) => {
+                    const isSelected = selectedSku && selectedSku.sku_code === sku.sku_code;
+                    return (
+                      <div
+                        key={i}
+                        onClick={() => setSelectedSku(sku)}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'center',
+                          alignItems: 'flex-start',
+                          padding: '12px 16px',
+                          borderRadius: '12px',
+                          border: `2px solid ${isSelected ? 'var(--primary-red)' : '#e2e8f0'}`,
+                          backgroundColor: isSelected ? '#fffafa' : '#fff',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          boxShadow: isSelected ? '0 4px 12px rgba(220, 38, 38, 0.08)' : 'none'
+                        }}
+                      >
+                        <span style={{ 
+                          color: isSelected ? 'var(--primary-red)' : '#1e293b', 
+                          fontSize: '14px', 
+                          fontWeight: isSelected ? '700' : '600',
+                          marginBottom: '4px' 
+                        }}>
+                          {sku.variant_name || sku.sku_code}
+                        </span>
+                        <span style={{ 
+                          color: isSelected ? 'var(--primary-red)' : '#64748b', 
+                          fontSize: '13px',
+                          fontWeight: '500'
+                        }}>
+                          ₹{sku.selling_price}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
+              </div>
             </div>
           )}
 
@@ -431,7 +512,7 @@ export default function ProductPage() {
       </div>
 
       {/* WHY INDIA TRUSTS Senior Anandam */}
-      <section className="section-container" id="trust-section" style={{ backgroundColor: '#F9F9F9', paddingTop: '48px', paddingBottom: '48px', marginTop: '40px', borderRadius: 'var(--radius-md)' }}>
+      <section id="trust-section" style={{ backgroundColor: '#F9F9F9', paddingTop: '48px', paddingBottom: '48px', marginTop: '40px', borderRadius: 'var(--radius-md)' }}>
         <div className="section-heading-wrapper" style={{ marginBottom: '40px', textAlign: 'center' }}>
           <h2 className="section-heading" style={{ color: 'var(--text-dark)', fontSize: '24px', textTransform: 'uppercase', letterSpacing: '1px' }}>WHY INDIA TRUSTS Senior Anandam?</h2>
         </div>

@@ -1,82 +1,190 @@
-import React from 'react';
-
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '../config/supabaseClient';
 
 export default function CollectionPage() {
   const {
-    allProductsList, groupedProducts, concernsList, categoriesList,
     selectedFilterCats, setSelectedFilterCats,
     selectedFilterConcerns, setSelectedFilterConcerns,
     catalogSort, setCatalogSort,
-    navigateTo, addToCart
+    navigateTo, addToCart, triggerBuyNow
   } = useAppContext();
 
-  // Local state for advanced search & filters
-  const [searchVal, setSearchVal] = React.useState("");
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = React.useState(false);
-  const [isMobileSortOpen, setIsMobileSortOpen] = React.useState(false);
-  const ABS_MIN = 249;
+  // Local state for advanced search, filter, sorting, pagination
+  const [searchVal, setSearchVal] = useState("");
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [isMobileSortOpen, setIsMobileSortOpen] = useState(false);
+
+  // Set ABS_MIN to 0 so local 1-Rupee test products are visible
+  const ABS_MIN = 0;
   const ABS_MAX = 59999;
-  const [minPrice, setMinPrice] = React.useState(ABS_MIN);
-  const [maxPrice, setMaxPrice] = React.useState(ABS_MAX);
-  const [selectedAvailability, setSelectedAvailability] = React.useState('All Products');
+  const [minPrice, setMinPrice] = useState(ABS_MIN);
+  const [maxPrice, setMaxPrice] = useState(ABS_MAX);
+  const [selectedAvailability, setSelectedAvailability] = useState('All Products');
+  const [visibleCount, setVisibleCount] = useState(12);
+  const [showBottomPill, setShowBottomPill] = useState(true);
+
+  // Hide pill when near footer (bottom of page)
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrolled = window.scrollY + window.innerHeight;
+      const total = document.documentElement.scrollHeight;
+      setShowBottomPill(total - scrolled > 400);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Fetch all active products
+  const { data: allProductsList = [], isLoading } = useQuery({
+    queryKey: ['allProducts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories ( name ),
+          skus ( id, selling_price, mrp ),
+          product_concerns ( concerns ( name ) )
+        `)
+        .eq('is_active', true);
+
+      if (error) throw error;
+
+      return (data || []).map(p => {
+        const defaultSku = p.skus && p.skus.length > 0 ? p.skus[0] : null;
+        const price = defaultSku ? Number(defaultSku.selling_price) : 0;
+        const mrp = defaultSku ? Number(defaultSku.mrp) : 0;
+        const category_title = p.categories ? p.categories.name : 'Uncategorized';
+        const concern_title = p.product_concerns && p.product_concerns.length > 0 && p.product_concerns[0].concerns
+          ? p.product_concerns[0].concerns.name
+          : null;
+
+        return {
+          ...p,
+          title: p.name,
+          category_title,
+          concern_title,
+          price,
+          mrp,
+          discount: (mrp > 0 && price < mrp)
+            ? Math.round(((mrp - price) / mrp) * 100) + '% off'
+            : ''
+        };
+      });
+    }
+  });
+
+  // Fetch concerns
+  const { data: concernsList = [] } = useQuery({
+    queryKey: ['concerns'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('concerns')
+        .select('*')
+        .eq('is_active', true);
+
+      if (error) throw error;
+      return (data || []).map(c => ({ ...c, title: c.name }));
+    }
+  });
+
+  // Fetch categories
+  const { data: categoriesList = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('is_active', true);
+
+      if (error) throw error;
+      return (data || []).map(c => ({ ...c, title: c.name }));
+    }
+  });
+
+  // Compute grouped products for checklist
+  const groupedProducts = useMemo(() => {
+    return allProductsList.reduce((acc, product) => {
+      if (!acc[product.category_title]) acc[product.category_title] = [];
+      acc[product.category_title].push(product);
+      return acc;
+    }, {});
+  }, [allProductsList]);
+
+  // Reset pagination when filter criteria change
+  React.useEffect(() => {
+    setVisibleCount(12);
+  }, [selectedFilterCats, selectedFilterConcerns, minPrice, maxPrice, selectedAvailability, searchVal]);
 
   // Generate filtered list
-  let list = [...allProductsList];
+  let list = useMemo(() => {
+    let filtered = [...allProductsList];
 
-  // Filter by Category and Concern (OR logic across both groups)
-  if (selectedFilterCats.length > 0 || selectedFilterConcerns.length > 0) {
-    const catsLower = selectedFilterCats.map(c => c.toLowerCase().trim());
-    const concernsLower = selectedFilterConcerns.map(c => c.toLowerCase().trim());
-    
-    list = list.filter(p => {
-      const matchCat = p.category_title && catsLower.includes(p.category_title.toLowerCase().trim());
-      const matchConcern = p.concern_title && concernsLower.includes(p.concern_title.toLowerCase().trim());
-      return matchCat || matchConcern;
-    });
-  }
+    // Filter by Category and Concern (OR logic across both groups)
+    if (selectedFilterCats.length > 0 || selectedFilterConcerns.length > 0) {
+      const catsLower = selectedFilterCats.map(c => c.toLowerCase().trim());
+      const concernsLower = selectedFilterConcerns.map(c => c.toLowerCase().trim());
 
-  // Filter by Price Range
-  list = list.filter(p => p.price >= minPrice && p.price <= maxPrice);
+      filtered = filtered.filter(p => {
+        const matchCat = p.category_title && catsLower.includes(p.category_title.toLowerCase().trim());
+        const matchConcern = p.concern_title && concernsLower.includes(p.concern_title.toLowerCase().trim());
+        return matchCat || matchConcern;
+      });
+    }
 
-  // Filter by Availability
-  if (selectedAvailability !== 'All Products') {
-    list = list.filter(p => {
-      if (selectedAvailability === 'In Stock') return true;
-      if (selectedAvailability === 'Out of Stock') return false;
-      return true;
-    });
-  }
+    // Filter by Price Range
+    filtered = filtered.filter(p => p.price >= minPrice && p.price <= maxPrice);
 
-  // Filter by Keyword Search
-  if (searchVal.trim()) {
-    const query = searchVal.toLowerCase().trim();
-    list = list.filter(p =>
-      p.title.toLowerCase().includes(query) ||
-      (p.description && p.description.toLowerCase().includes(query))
-    );
-  }
+    // Filter by Availability
+    if (selectedAvailability !== 'All Products') {
+      filtered = filtered.filter(p => {
+        if (selectedAvailability === 'In Stock') return true;
+        if (selectedAvailability === 'Out of Stock') return false;
+        return true;
+      });
+    }
 
-  // Sort products
-  const getDiscountVal = (discountStr) => {
-    if (!discountStr) return 0;
-    const match = discountStr.match(/(\d+)%/);
-    return match ? parseInt(match[1], 10) : 0;
-  };
+    // Filter by Keyword Search
+    if (searchVal.trim()) {
+      const query = searchVal.toLowerCase().trim();
+      filtered = filtered.filter(p =>
+        p.title.toLowerCase().includes(query) ||
+        (p.description && p.description.toLowerCase().includes(query))
+      );
+    }
 
-  if (catalogSort === "price-low") {
-    list.sort((a, b) => a.price - b.price);
-  } else if (catalogSort === "price-high") {
-    list.sort((a, b) => b.price - a.price);
-  } else if (catalogSort === "rating") {
-    list.sort((a, b) => b.rating - a.rating);
-  } else if (catalogSort === "alpha") {
-    list.sort((a, b) => a.title.localeCompare(b.title));
-  } else if (catalogSort === "discount-low") {
-    list.sort((a, b) => getDiscountVal(a.discount) - getDiscountVal(b.discount));
-  } else if (catalogSort === "discount-high") {
-    list.sort((a, b) => getDiscountVal(b.discount) - getDiscountVal(a.discount));
-  }
+    // Sort products
+    const getDiscountVal = (discountStr) => {
+      if (!discountStr) return 0;
+      const match = discountStr.match(/(\d+)%/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+
+    if (catalogSort === "price-low") {
+      filtered.sort((a, b) => a.price - b.price);
+    } else if (catalogSort === "price-high") {
+      filtered.sort((a, b) => b.price - a.price);
+    } else if (catalogSort === "rating") {
+      filtered.sort((a, b) => b.rating - a.rating);
+    } else if (catalogSort === "alpha") {
+      filtered.sort((a, b) => a.title.localeCompare(b.title));
+    } else if (catalogSort === "discount-low") {
+      filtered.sort((a, b) => getDiscountVal(a.discount) - getDiscountVal(b.discount));
+    } else if (catalogSort === "discount-high") {
+      filtered.sort((a, b) => getDiscountVal(b.discount) - getDiscountVal(a.discount));
+    }
+
+    return filtered;
+  }, [allProductsList, selectedFilterCats, selectedFilterConcerns, minPrice, maxPrice, selectedAvailability, searchVal, catalogSort]);
+
+  const paginatedList = useMemo(() => {
+    return list.slice(0, visibleCount);
+  }, [list, visibleCount]);
+
+  const hasNextPage = list.length > visibleCount;
 
   const toggleCatFilter = (catName) => {
     setSelectedFilterCats(prev =>
@@ -105,6 +213,10 @@ export default function CollectionPage() {
     setMaxPrice(ABS_MAX);
     setSelectedAvailability('All Products');
     setSearchVal("");
+  };
+
+  const handleLoadMore = () => {
+    setVisibleCount(prev => prev + 12);
   };
 
   return (
@@ -271,9 +383,20 @@ export default function CollectionPage() {
             </div>
           </div>
 
-          {list.length > 0 ? (
+          {isLoading ? (
             <div className="products-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-              {list.map(prod => (
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="product-card" style={{ background: '#f5f5f5', animation: 'pulse 1.5s infinite' }}>
+                  <div className="product-card-img-wrapper" style={{ background: '#e0e0e0', minHeight: '200px' }}></div>
+                  <div className="product-card-content">
+                    <div style={{ height: '20px', background: '#e0e0e0', marginBottom: '10px' }}></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : paginatedList.length > 0 ? (
+            <div className="products-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+              {paginatedList.map(prod => (
                 <div className="product-card" key={prod.id}>
                   <div
                     className="product-card-img-wrapper"
@@ -314,20 +437,20 @@ export default function CollectionPage() {
                     <div className="product-card-actions">
                       <button
                         className="btn-secondary-sm mobile-hide"
-                        onClick={() => navigateTo('product-detail', { productId: prod.id })}
+                        onClick={() => addToCart(prod)}
                       >
-                        QUICK VIEW
+                        Add to Cart
                       </button>
                       <button
                         className="btn-primary-sm mobile-hide"
-                        onClick={() => addToCart(prod)}
+                        onClick={() => triggerBuyNow(prod)}
                       >
                         Buy Now
                       </button>
                     </div>
                   </div>
                   <div className="mobile-buttons-row desktop-hide">
-                    <button className="btn-buy-now-mobile" onClick={() => addToCart(prod)}>Buy Now</button>
+                    <button className="btn-buy-now-mobile" onClick={() => triggerBuyNow(prod)}>Buy Now</button>
                     <button className="btn-add-cart-mobile" onClick={() => addToCart(prod)}>Add to Cart</button>
                   </div>
                 </div>
@@ -340,21 +463,31 @@ export default function CollectionPage() {
               <button className="btn-primary-sm" style={{ width: 'auto', padding: '10px 24px' }} onClick={clearAllFilters}>Reset Filters</button>
             </div>
           )}
+
+          {hasNextPage && (
+            <div style={{ textAlign: 'center', marginTop: '40px' }}>
+              <button className="btn-secondary" onClick={handleLoadMore}>
+                Load More Products
+              </button>
+            </div>
+          )}
         </main>
       </div>
 
       {/* Mobile Fixed Bottom Bar */}
-      <div className="mobile-bottom-actions desktop-hide">
-        <div className="mobile-bottom-btn" onClick={() => setIsMobileFilterOpen(true)}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-          Filter
+      {showBottomPill && !isMobileFilterOpen && !isMobileSortOpen && (
+        <div className="mobile-bottom-actions desktop-hide">
+          <div className="mobile-bottom-btn" onClick={() => setIsMobileFilterOpen(true)}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+            Filter
+          </div>
+          <div className="mobile-bottom-divider"></div>
+          <div className="mobile-bottom-btn" onClick={() => setIsMobileSortOpen(true)}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+            Sort By
+          </div>
         </div>
-        <div className="mobile-bottom-divider"></div>
-        <div className="mobile-bottom-btn" onClick={() => setIsMobileSortOpen(true)}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
-          Sort By
-        </div>
-      </div>
+      )}
 
       {/* Mobile Filter Drawer Backdrop */}
       {isMobileFilterOpen && (
@@ -364,20 +497,20 @@ export default function CollectionPage() {
       {/* Mobile Filter Drawer */}
       <div className={`mobile-filter-drawer desktop-hide ${isMobileFilterOpen ? 'open' : ''}`}>
         <div className="mobile-filter-header">
-          <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: 'var(--primary-red)' }}>Filters</h3>
-          <button onClick={() => setIsMobileFilterOpen(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: 'var(--text-gray)' }}>✕</button>
+          <h3 className="mobile-filter-title">Filters</h3>
+          <button onClick={() => setIsMobileFilterOpen(false)} className="mobile-filter-close-btn">✕</button>
         </div>
         <div className="mobile-filter-body">
           <div className="filter-section">
-            <h4 style={{ color: 'var(--primary-red)' }}>Price Range</h4>
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', marginTop: '16px' }}>
+            <h4 className="mobile-filter-section-title">Price Range</h4>
+            <div className="price-inputs-row">
               <div className="price-input-box">
                 <span>₹</span>
-                <input type="number" value={minPrice} onChange={(e) => setMinPrice(Math.max(ABS_MIN, Math.min(e.target.value, maxPrice)))} />
+                <input type="number" value={minPrice} onChange={(e) => setMinPrice(Math.max(ABS_MIN, Math.min(Number(e.target.value), maxPrice)))} />
               </div>
               <div className="price-input-box">
                 <span>₹</span>
-                <input type="number" value={maxPrice} onChange={(e) => setMaxPrice(Math.max(minPrice, Math.min(e.target.value, ABS_MAX)))} />
+                <input type="number" value={maxPrice} onChange={(e) => setMaxPrice(Math.max(minPrice, Math.min(Number(e.target.value), ABS_MAX)))} />
               </div>
             </div>
 
@@ -395,9 +528,9 @@ export default function CollectionPage() {
             </div>
           </div>
           <div className="filter-section">
-            <h4 style={{ color: 'var(--primary-red)' }}>Availability</h4>
-            <div className="filter-list" style={{ marginTop: '16px' }}>
-              {['All Products', 'In Stock', 'Out of Stock'].map(avail => (
+            <h4 className="mobile-filter-section-title">Availability</h4>
+            <div className="filter-list">
+              {['All Products', 'In Stock'].map(avail => (
                 <label key={avail} className="availability-radio">
                   <input
                     type="radio"
@@ -411,10 +544,10 @@ export default function CollectionPage() {
               ))}
             </div>
           </div>
-          
-          <div style={{ display: 'flex', gap: '12px', marginTop: '-16px' }}>
-            <button className="btn-primary-sm" onClick={clearAllFilters} style={{ flex: 1, background: 'transparent', color: 'var(--primary-red)', border: '1px solid var(--primary-red)', borderRadius: '30px', padding: '12px' }}>Clear All</button>
-            <button className="btn-primary-sm" onClick={() => setIsMobileFilterOpen(false)} style={{ flex: 1, background: 'var(--primary-red)', color: '#fff', border: 'none', borderRadius: '30px', padding: '12px' }}>Apply</button>
+
+          <div className="mobile-filter-footer-actions">
+            <button className="mobile-filter-btn-clear" onClick={clearAllFilters}>Clear All</button>
+            <button className="mobile-filter-btn-apply" onClick={() => setIsMobileFilterOpen(false)}>Apply</button>
           </div>
         </div>
       </div>
@@ -428,11 +561,10 @@ export default function CollectionPage() {
       <div className={`mobile-sort-drawer desktop-hide ${isMobileSortOpen ? 'open' : ''}`}>
         <div className="mobile-sort-list">
           {[
-            { id: 'newest', label: 'Newly Launched' },
+            { id: 'bestseller', label: 'Best Sellers' },
             { id: 'price-low', label: 'Price: Low to high' },
             { id: 'price-high', label: 'Price: High to low' },
-            { id: 'discount-low', label: 'Discount: Low to high' },
-            { id: 'discount-high', label: 'Discount: High to low' }
+            { id: 'alpha', label: 'Alphabetical (A-Z)' }
           ].map(option => (
             <label key={option.id} className="mobile-sort-item">
               <div className={`sort-radio-outer ${catalogSort === option.id ? 'active' : ''}`}>

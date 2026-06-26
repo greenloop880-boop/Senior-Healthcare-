@@ -12,8 +12,9 @@ export default function CartDrawer() {
     promoCodeInput, setPromoCodeInput,
     applyPromo, removePromo,
     subtotal, discountAmount, deliveryCharges, estimatedTax, grandTotal,
-    handleCheckout
+    navigateTo, setIsCheckoutModalOpen
   } = useAppContext();
+
 
   return (
     <div
@@ -57,19 +58,17 @@ export default function CartDrawer() {
                 <div className="cart-item-details">
                   <div>
                     <h4 className="cart-item-title">{item.product.title}</h4>
-                    {item.selectedVariants && Object.keys(item.selectedVariants).length > 0 && (
+                    {item.selectedSku && (
                       <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
-                        {Object.entries(item.selectedVariants).map(([k, v]) => (
-                          <span key={k} style={{ marginRight: '8px' }}>{k}: <strong>{v}</strong></span>
-                        ))}
+                        <span style={{ marginRight: '8px' }}>Variant: <strong>{item.selectedSku.sku_code}</strong></span>
                       </div>
                     )}
                     <div className="cart-item-price-row" style={{ marginTop: '4px' }}>
                       <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--primary-red)' }}>
-                        ₹{item.product.price}
+                        ₹{item.selectedSku ? item.selectedSku.selling_price : item.product.price}
                       </span>
                       <span style={{ fontSize: '11px', textDecoration: 'line-through', color: 'var(--text-gray)' }}>
-                        ₹{item.product.mrp}
+                        ₹{item.selectedSku ? item.selectedSku.mrp : item.product.mrp}
                       </span>
                     </div>
                   </div>
@@ -94,41 +93,13 @@ export default function CartDrawer() {
 
         {cart.length > 0 && (
           <div className="cart-summary">
-            {!appliedPromo ? (
-              <div className="promo-container">
-                <input
-                  type="text"
-                  className="promo-input"
-                  placeholder="Enter Coupon: SENIORANANDAM10 / SENIOR15"
-                  value={promoCodeInput}
-                  onChange={(e) => setPromoCodeInput(e.target.value)}
-                />
-                <button className="btn-promo-apply" onClick={applyPromo}>APPLY</button>
-              </div>
-            ) : (
-              <div className="promo-active-tag">
-                <span>🎟️ COUPON APPLIED: <strong>{appliedPromo.code}</strong> (-{appliedPromo.discountPercent}%)</span>
-                <button className="promo-remove-btn" onClick={removePromo}>Remove</button>
-              </div>
-            )}
-
             <div className="cart-summary-row">
               <span>Subtotal</span>
               <span>₹{subtotal}</span>
             </div>
-            {appliedPromo && (
-              <div className="cart-summary-row" style={{ color: '#1A6E58', fontWeight: '600' }}>
-                <span>Discount</span>
-                <span>-₹{discountAmount}</span>
-              </div>
-            )}
             <div className="cart-summary-row">
               <span>Delivery & Handling</span>
               <span>{deliveryCharges === 0 ? "FREE" : `₹${deliveryCharges}`}</span>
-            </div>
-            <div className="cart-summary-row">
-              <span>Estimated Taxes (5% GST)</span>
-              <span>₹{estimatedTax}</span>
             </div>
 
             <div className="cart-summary-row total">
@@ -136,9 +107,10 @@ export default function CartDrawer() {
               <span>₹{grandTotal}</span>
             </div>
 
-            <button className="btn-checkout" onClick={handleCheckout}>
-              PLACE ORDER (CASH ON DELIVERY)
+            <button className="btn-checkout" onClick={() => { setIsCartOpen(false); setIsCheckoutModalOpen(true); }}>
+              PROCEED TO SECURE CHECKOUT
             </button>
+
             <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-gray)', marginTop: '10px' }}>
               🔒 256-bit SSL encrypted secure checkout
             </div>

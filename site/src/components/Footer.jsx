@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
+import logoImg from '../assets/logo.png';
 
 export default function Footer() {
   const { navigateTo, subscribeNewsletter } = useAppContext();
@@ -18,14 +19,17 @@ export default function Footer() {
     <footer className="footer-main">
       <div className="footer-top">
         <div className="footer-column">
-          <span
-            className="logo-text"
-            style={{ color: '#FFFFFF', marginBottom: '16px', cursor: 'pointer' }}
-            onClick={() => navigateTo('home')}
+          <a
+            href="/"
+            onClick={(e) => { e.preventDefault(); navigateTo('home'); }}
+            style={{ display: 'inline-block', marginBottom: '16px', textDecoration: 'none' }}
           >
-            Senior Anandam
-
-          </span>
+            <img 
+              src={logoImg} 
+              alt="Senior Anandam Logo" 
+              style={{ height: '65px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} 
+            />
+          </a>
           <p style={{ marginTop: '16px' }}>Empowering Indian seniors to live active, independent, and joyful lives with premium, clinically approved support products.</p>
           <p><strong>AnandamNXT Company</strong><br />Partner in healthy aging</p>
         </div>

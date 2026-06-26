@@ -26,129 +26,63 @@ export const AppProvider = ({ children }) => {
   const [currentPage, setCurrentPage] = useState(() => getInitialRoute().pageName);
   const [currentPageParams, setCurrentPageParams] = useState(() => getInitialRoute().params);
 
-  const [allProductsList, setAllProductsList] = useState([]);
-  const [categoriesList, setCategoriesList] = useState([]);
-  const [concernsList, setConcernsList] = useState([]);
-  const [heroBanners, setHeroBanners] = useState([]);
-  const [healthReviews, setHealthReviews] = useState([]);
-  const [communityVideos, setCommunityVideos] = useState([]);
-  const [customerReviews, setCustomerReviews] = useState([]);
-  const [isLoadingDynamicData, setIsLoadingDynamicData] = useState(true);
-  const [announcementText, setAnnouncementText] = useState("<strong>IMPORTANT :</strong> Dear Customer, Senior Anandam never asks for additional payments, OTPs, bank details, or personal information over phone calls. If you receive any suspicious calls, please report: <strong>+91 9911789911</strong> or email: <strong>support@senioranandam.com</strong>");
+  
+  const [userSession, setUserSession] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+  const [userAvatar, setUserAvatar] = useState(null);
 
   React.useEffect(() => {
-    async function loadData() {
-      try {
-        const CACHE_KEY = 'senior_anandam_data_cache_v7';
-        const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in ms
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserSession(session);
+    });
 
-        const cached = localStorage.getItem(CACHE_KEY);
-        if (cached) {
-          try {
-            const parsed = JSON.parse(cached);
-            if (parsed.timestamp && Date.now() - parsed.timestamp < CACHE_TTL && parsed.data) {
-              setAllProductsList(parsed.data.products || []);
-              setCategoriesList(parsed.data.categories || []);
-              setConcernsList(parsed.data.concerns || []);
-              setHeroBanners(parsed.data.heroBanners || []);
-              setHealthReviews(parsed.data.healthReviews || []);
-              setCommunityVideos(parsed.data.communityVideos || []);
-              setCustomerReviews(parsed.data.customerReviews || []);
-              if (parsed.data.announcement) setAnnouncementText(parsed.data.announcement);
-              setIsLoadingDynamicData(false);
-              return;
-            }
-          } catch (e) {
-            console.error('Cache parsing failed, fetching fresh data', e);
-          }
-        }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserSession(session);
+    });
 
-        const [prodRes, catRes, conRes, heroRes, hrRes, cvRes, crRes, annRes] = await Promise.all([
-          supabase.from('products').select('*'),
-          supabase.from('categories').select('*'),
-          supabase.from('concerns').select('*'),
-          supabase.from('hero_banners').select('*').order('id'),
-          supabase.from('health_reviews').select('*').order('id'),
-          supabase.from('community_videos').select('*'),
-          supabase.from('customer_reviews').select('*').order('id'),
-          supabase.from('announcements').select('*')
-        ]);
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchUserProfile = async (userId, sessionEmail) => {
+    try {
+      const { data, error } = await supabase
+        .from('blogs')
+        .select('*')
+        .eq('id', `profile-${userId}`)
+        .maybeSingle();
         
-        const concernMapping = {
-          'ankle-brace': 'Joint Care',
-          'elastic-wrist': 'Joint Care',
-          'hinged-stabilizer': 'Joint Care',
-          'knee-sleeves': 'Joint Care',
-          'coccyx-cushion': 'Joint Care',
-          'lumbar-support': 'Joint Care',
-          'neck-pillow': 'Joint Care',
-          'massage-gun': 'Joint Care',
-          'nebulizer-machine': 'Lung Care',
-          'foldable-stick': 'Fall Prevention',
-          'folding-walker': 'Fall Prevention',
-          'folding-wheelchair': 'Fall Prevention',
-          'grab-bar': 'Fall Prevention',
-          'led-walking-stick': 'Fall Prevention',
-          'shower-chair': 'Fall Prevention',
-          'gut-probiotic': 'Gut Care',
-          'consti-calm': 'Gut Care'
-        };
-
-        let products = [];
-        if (prodRes.data) {
-          products = prodRes.data.map(p => ({
-            ...p,
-            concern_title: p.concern_title || concernMapping[p.id] || null,
-            discount: (p.mrp > 0 && p.price < p.mrp)
-              ? Math.round(((p.mrp - p.price) / p.mrp) * 100) + '% off'
-              : ''
-          }));
-          setAllProductsList(products);
+      if (data && data.content) {
+        const dbProfile = data.content;
+        dbProfile.email = sessionEmail || dbProfile.email;
+        setUserProfile(dbProfile);
+        localStorage.setItem('userProfile', JSON.stringify(dbProfile));
+        if (data.image_url) {
+          setUserAvatar(data.image_url);
+          localStorage.setItem('userAvatar', data.image_url);
+        } else {
+          setUserAvatar(null);
         }
-        
-        const categories = catRes.data || [];
-        const concerns = conRes.data || [];
-        const banners = heroRes.data || [];
-        const hReviews = hrRes.data || [];
-        const cVideos = cvRes.data || [];
-        const cReviews = crRes.data || [];
-        const announcement = (annRes && annRes.data && annRes.data.length > 0) ? annRes.data[0].text : null;
-
-        setCategoriesList(categories);
-        setConcernsList(concerns);
-        setHeroBanners(banners);
-        setHealthReviews(hReviews);
-        setCommunityVideos(cVideos);
-        setCustomerReviews(cReviews);
-        if (announcement) setAnnouncementText(announcement);
-
-        // Save to cache
-        try {
-          const cacheData = {
-            timestamp: Date.now(),
-            data: {
-              products,
-              categories,
-              concerns,
-              heroBanners: banners,
-              healthReviews: hReviews,
-              communityVideos: cVideos,
-              customerReviews: cReviews,
-              announcement
-            }
-          };
-          localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-        } catch (e) {
-          console.error("Failed to save cache (quota exceeded?)", e);
+      } else {
+        if (sessionEmail) {
+          setUserProfile({ email: sessionEmail });
         }
-
-      } catch (e) {
-        console.error('Error fetching data:', e);
-      } finally {
-        setIsLoadingDynamicData(false);
       }
+    } catch (e) {
+      console.error('Error fetching profile from DB:', e);
     }
-    loadData();
+  };
+
+  React.useEffect(() => {
+    if (userSession) {
+      fetchUserProfile(userSession.user.id, userSession.user.email);
+    } else {
+      setUserProfile(null);
+      setUserAvatar(null);
+    }
+  }, [userSession]);
+
+  React.useEffect(() => {
+    
 
     // Setup browser history state for back button support
     const handlePopState = (event) => {
@@ -185,32 +119,12 @@ export const AppProvider = ({ children }) => {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  const fuseRef = useRef(null);
   
-  React.useEffect(() => {
-    if (allProductsList.length > 0) {
-      fuseRef.current = new Fuse(allProductsList, {
-        keys: [
-          { name: 'title', weight: 3 },
-          { name: 'category_title', weight: 2 },
-          { name: 'description', weight: 1 },
-          { name: 'specs', weight: 1 }
-        ],
-        threshold: 0.4,
-        ignoreLocation: true
-      });
-    }
-  }, [allProductsList]);
-
-  const performSearch = React.useCallback((query) => {
-    if (!query || !query.trim() || !fuseRef.current) return [];
-    return fuseRef.current.search(query).map(result => result.item);
-  }, []);
 
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [activeQuizId, setActiveQuizId] = useState(null);
-  const [activeBestSellersTab, setActiveBestSellersTab] = useState("BP Monitors & Other Devices");
+  const [activeBestSellersTab, setActiveBestSellersTab] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -231,6 +145,10 @@ export const AppProvider = ({ children }) => {
   const [helpFormOpen, setHelpFormOpen] = useState(false);
   const [helpFormData, setHelpFormData] = useState({ name: '', phone: '', timeSlot: '' });
 
+  // Checkout Modal State
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [showCancelAlert, setShowCancelAlert] = useState(false);
+
   const [currentQuizStep, setCurrentQuizStep] = useState(0);
   const [quizAnswers, setQuizAnswers] = useState({});
   const [showQuizResults, setShowQuizResults] = useState(false);
@@ -247,11 +165,7 @@ export const AppProvider = ({ children }) => {
   });
   const [catalogSort, setCatalogSort] = useState("bestseller");
 
-  const groupedProducts = allProductsList.reduce((acc, product) => {
-    if (!acc[product.category_title]) acc[product.category_title] = [];
-    acc[product.category_title].push(product);
-    return acc;
-  }, {});
+  
 
   const navigateTo = (pageName, params = {}) => {
     // Push new state to browser history with query params
@@ -286,11 +200,8 @@ export const AppProvider = ({ children }) => {
     }, 3000);
   };
 
-  const addToCart = (product, quantity = 1, selectedVariants = {}) => {
-    const variantsString = Object.entries(selectedVariants || {})
-      .sort(([k1], [k2]) => k1.localeCompare(k2))
-      .map(([k, v]) => `${k}:${v}`).join('|');
-    const cartItemId = variantsString ? `${product.id}-${variantsString}` : product.id;
+  const addToCart = (product, quantity = 1, selectedSku = null) => {
+    const cartItemId = selectedSku ? selectedSku.id : product.id;
 
     setCart((prevCart) => {
       const existing = prevCart.find((item) => item.cartItemId === cartItemId);
@@ -301,9 +212,18 @@ export const AppProvider = ({ children }) => {
             : item
         );
       }
-      return [...prevCart, { cartItemId, product, quantity, selectedVariants }];
+      return [...prevCart, { cartItemId, product, quantity, selectedSku }];
     });
     showToast(`Added ${product.title} to cart.`);
+  };
+
+  const [buyNowItem, setBuyNowItem] = useState(null);
+
+  const triggerBuyNow = (product, quantity = 1, selectedSku = null) => {
+    const cartItemId = selectedSku ? selectedSku.id : product.id;
+    setBuyNowItem({ cartItemId, product, quantity, selectedSku });
+    setIsCartOpen(false);
+    setIsCheckoutModalOpen(true);
   };
 
   const updateCartQty = (cartItemId, delta) => {
@@ -354,10 +274,14 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const saveUserProfileToDb = async (profileData, avatarImg) => {
+  const saveUserProfileToDb = async (profileData, avatarImg, userId) => {
     try {
+      if (!userId) {
+        console.error('Cannot save profile: No userId provided.');
+        return;
+      }
       const payload = {
-        id: `profile-${profileData.mobile}`, // use mobile as unique identifier since it's hardcoded for this demo
+        id: `profile-${userId}`,
         title: `${profileData.firstName} ${profileData.lastName}`,
         summary: profileData.email || 'No email provided',
         date: new Date().toISOString(),
@@ -367,6 +291,9 @@ export const AppProvider = ({ children }) => {
         content: profileData
       };
       await supabase.from('blogs').upsert([payload]);
+      // Update global context state
+      setUserProfile(prev => ({ ...prev, ...profileData, email: prev?.email || profileData.email }));
+      setUserAvatar(avatarImg || null);
     } catch (e) {
       console.error('Error saving profile to DB:', e);
     }
@@ -419,11 +346,14 @@ export const AppProvider = ({ children }) => {
     showToast("Coupon removed.");
   };
 
-  const subtotal = cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+  const subtotal = cart.reduce((acc, item) => {
+    const price = item.selectedSku ? item.selectedSku.selling_price : item.product.price;
+    return acc + price * item.quantity;
+  }, 0);
   const discountAmount = appliedPromo ? Math.round(subtotal * (appliedPromo.discountPercent / 100)) : 0;
-  const deliveryCharges = subtotal > 999 || subtotal === 0 ? 0 : 99;
-  const estimatedTax = Math.round((subtotal - discountAmount) * 0.05); // 5% GST
-  const grandTotal = subtotal - discountAmount + deliveryCharges + estimatedTax;
+  const deliveryCharges = 0; // Temporarily removed delivery fee
+  const estimatedTax = 0; // Taxes are inclusive in MRP
+  const grandTotal = subtotal - discountAmount + deliveryCharges;
 
   const value = {
     currentPage, setCurrentPage,
@@ -454,23 +384,31 @@ export const AppProvider = ({ children }) => {
     selectedFilterCats, setSelectedFilterCats,
     selectedFilterConcerns, setSelectedFilterConcerns,
     catalogSort, setCatalogSort,
-    allProductsList, categoriesList, concernsList,
-    heroBanners, healthReviews, communityVideos, customerReviews,
-    isLoadingDynamicData, groupedProducts,
-    announcementText, setAnnouncementText,
+    isCheckoutModalOpen, setIsCheckoutModalOpen,
+    showCancelAlert, setShowCancelAlert,
+    
+    
+    
+    
     navigateTo,
-    performSearch,
+    
     showToast,
     addToCart,
     updateCartQty,
     removeFromCart,
+    triggerBuyNow,
     handleCheckout,
     submitCallbackRequest,
     saveUserProfileToDb,
     subscribeNewsletter,
     applyPromo,
     removePromo,
-    subtotal, discountAmount, deliveryCharges, estimatedTax, grandTotal
+    subtotal, discountAmount, deliveryCharges, estimatedTax, grandTotal,
+    userSession, setUserSession,
+    userProfile, setUserProfile,
+    userAvatar, setUserAvatar,
+    fetchUserProfile,
+    buyNowItem, setBuyNowItem
   };
 
   return (

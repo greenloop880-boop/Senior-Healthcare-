@@ -2,17 +2,106 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowIcon, StarIcon } from '../components/Icons';
 import { IMAGES, COMMUNITY_VIDEOS, PREMIUM_CUSTOMER_REVIEWS } from '../config/images';
 import { useAppContext } from '../context/AppContext';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '../config/supabaseClient';
 import expertBanner from '../assets/expert banner.png';
 
 export default function HomePage() {
   const {
     currentPage, navigateTo, heroIndex, setHeroIndex, carouselTimer,
-    activeBestSellersTab, setActiveBestSellersTab, addToCart, handleCheckout,
+    activeBestSellersTab, setActiveBestSellersTab, addToCart, setIsCheckoutModalOpen, setIsCartOpen,
     setActiveQuizId, setActiveVideoId, setActiveReviewDetail,
-    currentScrollDot, setCurrentScrollDot, reviewsScrollRef,
-    groupedProducts, categoriesList, concernsList,
-    heroBanners, healthReviews, communityVideos, customerReviews
+    currentScrollDot, setCurrentScrollDot, reviewsScrollRef
   } = useAppContext();
+
+  const queryClient = useQueryClient();
+
+  const { data: heroBanners = [], isLoading: isLoadingHero } = useQuery({
+    queryKey: ['heroBanners'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('hero_banners').select('*').order('id');
+      if (error) { console.error('Hero Error:', error); throw error; }
+      return data || [];
+    }
+  });
+
+  const { data: categoriesList = [], isLoading: isLoadingCats } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('categories').select('*').eq('is_active', true);
+      if (error) { console.error('Categories Error:', error); throw error; }
+      return (data || []).map(c => ({ ...c, title: c.name }));
+    }
+  });
+
+  const { data: concernsList = [] } = useQuery({
+    queryKey: ['concerns'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('concerns').select('*').eq('is_active', true);
+      if (error) { console.error('Concerns Error:', error); throw error; }
+      return (data || []).map(c => ({ ...c, title: c.name }));
+    }
+  });
+
+  const { data: healthReviews = [] } = useQuery({
+    queryKey: ['healthReviews'],
+    queryFn: async () => {
+      const { data } = await supabase.from('health_reviews').select('*').order('id');
+      return data || [];
+    }
+  });
+
+  const { data: communityVideos = [] } = useQuery({
+    queryKey: ['communityVideos'],
+    queryFn: async () => {
+      const { data } = await supabase.from('community_videos').select('*');
+      return data || [];
+    }
+  });
+
+  const { data: customerReviews = [] } = useQuery({
+    queryKey: ['customerReviews'],
+    queryFn: async () => {
+      const { data } = await supabase.from('customer_reviews').select('*').order('id');
+      return data || [];
+    }
+  });
+
+  const { data: homepageProducts = {}, isLoading: isLoadingProducts } = useQuery({
+    queryKey: ['homepageProducts'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('products')
+        .select('*, categories(name), skus(id, selling_price, mrp)')
+        .eq('is_active', true)
+        .limit(24);
+      
+      if (error) { console.error('Products Error:', error); throw error; }
+      
+      const processed = (data || []).map(p => {
+        const price = p.skus && p.skus.length > 0 ? Number(p.skus[0].selling_price) : 0;
+        const mrp = p.skus && p.skus.length > 0 ? Number(p.skus[0].mrp) : 0;
+        return {
+          ...p,
+          title: p.name,
+          category_title: p.categories?.name || 'Other',
+          price, mrp,
+          discount: (mrp > 0 && price < mrp) ? Math.round(((mrp - price) / mrp) * 100) + '% off' : ''
+        };
+      });
+
+      const grouped = {
+        'All': processed
+      };
+      processed.forEach(p => {
+        const cat = p.category_title;
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(p);
+      });
+      return grouped;
+    }
+  });
+
+  const groupedProducts = homepageProducts;
 
   const [tabsScrollOffset, setTabsScrollOffset] = useState(0);
   const tabsContainerRef = useRef(null);
@@ -39,7 +128,21 @@ export default function HomePage() {
 
   const safeHeroIndex = activeBanners.length > 0 ? (heroIndex % activeBanners.length + activeBanners.length) % activeBanners.length : 0;
 
-
+  // Sequential Banner Prefetching
+  useEffect(() => {
+    if (activeBanners.length > 1) {
+      const nextIndex = (safeHeroIndex + 1) % activeBanners.length;
+      const nextBanner = activeBanners[nextIndex];
+      if (nextBanner) {
+        const isMobile = window.innerWidth <= 768;
+        const imgUrl = isMobile ? (nextBanner.mobile_image_url || nextBanner.image_url) : nextBanner.image_url;
+        if (imgUrl) {
+          const img = new Image();
+          img.src = imgUrl;
+        }
+      }
+    }
+  }, [safeHeroIndex, activeBanners]);
 
   const scrollReviewsSlider = (dir) => {
     if (reviewsScrollRef.current) {
@@ -122,6 +225,12 @@ export default function HomePage() {
 
   return (
     <>
+      {/* HERO SKELETON */}
+      {isLoadingHero && (
+        <section className="hero-banner-section" style={{ background: '#e0e0e0', animation: 'pulse 1.5s infinite', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        </section>
+      )}
+
       {/* HERO CAROUSEL */}
       {activeBanners.length > 0 && (
         <section className="hero-banner-section" onMouseEnter={stopAutoplay} onMouseLeave={startAutoplay}>
@@ -213,22 +322,30 @@ export default function HomePage() {
         </div>
         <div className="category-scroll-container">
           <div className="category-grid">
-            {categoriesList.map((cat, idx) => (
-              <a
-                key={idx}
-                href="#products"
-                className="category-card"
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigateTo('collection', { activeCategory: cat.title });
-                }}
-              >
-                <span className="category-card-title">{cat.title}</span>
-                <div className="category-card-img-wrapper">
-                  <img src={cat.image_url} alt={cat.title} className="category-card-img" loading="lazy" />
+            {isLoadingCats ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="category-card" style={{ background: '#f5f5f5', animation: 'pulse 1.5s infinite', border: 'none' }}>
+                  <div style={{ height: '100px' }}></div>
                 </div>
-              </a>
-            ))}
+              ))
+            ) : (
+              categoriesList.map((cat, idx) => (
+                <a
+                  key={idx}
+                  href="#products"
+                  className="category-card"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigateTo('collection', { activeCategory: cat.title });
+                  }}
+                >
+                  <span className="category-card-title">{cat.title}</span>
+                  <div className="category-card-img-wrapper">
+                    <img src={cat.image_url} alt={cat.title} className="category-card-img" loading="lazy" />
+                  </div>
+                </a>
+              ))
+            )}
           </div>
         </div>
       </section>
@@ -316,67 +433,93 @@ export default function HomePage() {
           <button className="tabs-arrow left-arrow" onClick={() => handleTabsScroll('left')}><ArrowIcon direction="left" /></button>
           <div className="tabs-scroll-container" ref={tabsContainerRef} style={{ overflow: 'hidden' }}>
             <div className="tabs-list" ref={tabsListRef} style={{ transition: 'transform 1.2s cubic-bezier(0.25, 1, 0.5, 1)', transform: `translate3d(-${tabsScrollOffset}px, 0px, 0px)` }}>
-              {Object.keys(groupedProducts).map((tabName) => (
-                <button
-                  key={tabName}
-                  className={`tab-btn ${activeBestSellersTab === tabName ? 'active' : ''}`}
-                  onClick={() => setActiveBestSellersTab(tabName)}
-                >
-                  {tabName}
-                </button>
-              ))}
+              {Object.keys(groupedProducts).map((tabName, index) => {
+                const isActive = activeBestSellersTab === tabName || (index === 0 && !groupedProducts[activeBestSellersTab]);
+                return (
+                  <button
+                    key={tabName}
+                    className={`tab-btn ${isActive ? 'active' : ''}`}
+                    onClick={() => setActiveBestSellersTab(tabName)}
+                  >
+                    {tabName}
+                  </button>
+                );
+              })}
             </div>
           </div>
           <button className="tabs-arrow right-arrow" onClick={() => handleTabsScroll('right')}><ArrowIcon direction="right" /></button>
         </div>
-
+        
         <div className="products-slider-container">
-          {(groupedProducts[activeBestSellersTab] || []).length > 1 && (
-            <>
-              <button className="slider-arrow-btn left" onClick={() => scrollProducts('left')} aria-label="Scroll products left"><ArrowIcon direction="left" /></button>
-              <button className="slider-arrow-btn right" onClick={() => scrollProducts('right')} aria-label="Scroll products right"><ArrowIcon direction="right" /></button>
-            </>
-          )}
-          <div className="products-slider-track" ref={productsScrollRef}>
-            {groupedProducts[activeBestSellersTab]?.map((prod) => (
-              <div className="product-card animate-slide-up" key={prod.id}>
-                <div
-                  className="product-card-img-wrapper"
-                  onClick={() => navigateTo('product-detail', { productId: prod.id })}
-                >
-                  <img src={prod.image_url} alt={prod.title} loading="lazy" />
+          {(() => {
+            const currentTab = groupedProducts[activeBestSellersTab] ? activeBestSellersTab : Object.keys(groupedProducts)[0];
+            return (
+              <>
+                {(groupedProducts[currentTab] || []).length > 1 && (
+                  <>
+                    <button className="slider-arrow-btn left" onClick={() => scrollProducts('left')} aria-label="Scroll products left"><ArrowIcon direction="left" /></button>
+                    <button className="slider-arrow-btn right" onClick={() => scrollProducts('right')} aria-label="Scroll products right"><ArrowIcon direction="right" /></button>
+                  </>
+                )}
+                <div className="products-slider-track" ref={productsScrollRef}>
+                  {isLoadingProducts ? (
+                    Array.from({ length: 4 }).map((_, i) => (
+                      <div className="product-card animate-slide-up" key={i} style={{ background: '#f5f5f5', animation: 'pulse 1.5s infinite' }}>
+                        <div className="product-card-img-wrapper" style={{ background: '#e0e0e0' }}></div>
+                        <div className="product-card-content">
+                          <div style={{ height: '20px', background: '#e0e0e0', marginBottom: '10px', borderRadius: '4px' }}></div>
+                          <div style={{ height: '15px', background: '#e0e0e0', width: '80%', marginBottom: '20px', borderRadius: '4px' }}></div>
+                          <div style={{ display: 'flex', gap: '10px' }}>
+                            <div style={{ height: '36px', background: '#e0e0e0', flex: 1, borderRadius: '4px' }}></div>
+                            <div style={{ height: '36px', background: '#e0e0e0', flex: 1, borderRadius: '4px' }}></div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    groupedProducts[currentTab]?.map((prod) => (
+                      <div className="product-card animate-slide-up" key={prod.id}>
+                        <div
+                          className="product-card-img-wrapper"
+                          onClick={() => navigateTo('product-detail', { productId: prod.id })}
+                        >
+                          <img src={prod.image_url} alt={prod.title} loading="lazy" />
+                        </div>
+                        <div className="product-card-content">
+                          <h3
+                            className="product-card-title"
+                            onClick={() => navigateTo('product-detail', { productId: prod.id })}
+                          >
+                            {prod.title}
+                          </h3>
+                          <p className="product-card-desc">{prod.description}</p>
+                          <div className="product-card-price-row">
+                            <span className="product-price">₹{prod.price}</span>
+                            <span className="product-mrp">MRP ₹{prod.mrp}</span>
+                            <span className="product-discount">{prod.discount}</span>
+                          </div>
+                          <div className="product-card-actions">
+                            <button
+                              className="btn-secondary-sm"
+                              onClick={() => addToCart(prod)}
+                            >
+                              Add to Cart
+                            </button>
+                            <button
+                              className="btn-primary-sm"
+                              onClick={() => { addToCart(prod); setIsCartOpen(false); setIsCheckoutModalOpen(true); }}
+                            >
+                              Buy Now
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
-                <div className="product-card-content">
-                  <h3
-                    className="product-card-title"
-                    onClick={() => navigateTo('product-detail', { productId: prod.id })}
-                  >
-                    {prod.title}
-                  </h3>
-                  <p className="product-card-desc">{prod.description}</p>
-                  <div className="product-card-price-row">
-                    <span className="product-price">₹{prod.price}</span>
-                    <span className="product-mrp">MRP ₹{prod.mrp}</span>
-                    <span className="product-discount">{prod.discount}</span>
-                  </div>
-                  <div className="product-card-actions">
-                    <button
-                      className="btn-secondary-sm"
-                      onClick={() => addToCart(prod)}
-                    >
-                      Add to Cart
-                    </button>
-                    <button
-                      className="btn-primary-sm"
-                      onClick={() => handleCheckout()}
-                    >
-                      Buy Now
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+              </>
+            );
+          })()}
         </div>
       </section>
 

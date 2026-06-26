@@ -3,7 +3,7 @@ import { useAppContext } from '../context/AppContext';
 
 export default function SearchPage() {
   const {
-    navigateTo, addToCart, performSearch
+    navigateTo, addToCart, performSearch, setIsCheckoutModalOpen, setIsCartOpen, triggerBuyNow
   } = useAppContext();
 
   // Read query from URL hash
@@ -56,20 +56,20 @@ export default function SearchPage() {
                   <div className="product-card-actions">
                     <button
                       className="btn-secondary-sm mobile-hide"
-                      onClick={() => navigateTo('product-detail', { productId: prod.id })}
+                      onClick={() => addToCart(prod)}
                     >
-                      QUICK VIEW
+                      Add to Cart
                     </button>
                     <button
                       className="btn-primary-sm mobile-hide"
-                      onClick={() => addToCart(prod)}
+                      onClick={() => triggerBuyNow(prod)}
                     >
                       Buy Now
                     </button>
                   </div>
                 </div>
                 <div className="mobile-buttons-row desktop-hide">
-                  <button className="btn-buy-now-mobile" onClick={() => addToCart(prod)}>Buy Now</button>
+                  <button className="btn-buy-now-mobile" onClick={() => triggerBuyNow(prod)}>Buy Now</button>
                   <button className="btn-add-cart-mobile" onClick={() => addToCart(prod)}>Add to Cart</button>
                 </div>
               </div>
