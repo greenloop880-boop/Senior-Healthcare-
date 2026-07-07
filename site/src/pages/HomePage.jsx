@@ -264,7 +264,7 @@ export default function HomePage() {
                 <ArrowIcon direction="right" />
               </button>
 
-              <div className="hero-dots">
+              <div className="carousel-bullets">
                 {activeBanners.map((_, idx) => (
                   <button
                     key={idx}

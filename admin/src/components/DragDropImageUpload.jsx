@@ -123,6 +123,7 @@ export default function DragDropImageUpload({ onFileSelect, required, label, rec
             </svg>
             <p className="primary-text">Drag & drop, click, or paste an image</p>
             <p className="secondary-text">or click to browse from your computer</p>
+            {recommendedSize && <p style={{ color: '#0056b3', fontSize: '13px', marginTop: '8px', fontWeight: '500' }}>Recommended Size: {recommendedSize}</p>}
           </div>
         )}
       </div>

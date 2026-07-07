@@ -257,14 +257,14 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
           <div>
             <h4>Product Images & Media</h4>
             <p style={{ color: 'gray', fontSize: '14px', marginBottom: '16px' }}>Upload the main product image and gallery. (We preserve your existing upload logic here)</p>
-            <DragDropImageUpload onFileSelect={setImageFile} label="Primary Cover Image" />
+            <DragDropImageUpload onFileSelect={setImageFile} label="Primary Cover Image" recommendedSize="1000x1000 px" />
             <h5 style={{ marginTop: '24px' }}>Gallery Images</h5>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               {[0, 1, 2, 3].map(idx => (
                 <div key={idx} className="form-group" style={{ border: '1px solid #e2e8f0', padding: '10px', borderRadius: '6px', backgroundColor: '#f8fafc' }}>
                   <DragDropImageUpload onFileSelect={(file) => {
                     const newFiles = [...galleryFiles]; newFiles[idx] = file; setGalleryFiles(newFiles);
-                  }} label={`Gallery Image ${idx + 1}`} />
+                  }} label={`Gallery Image ${idx + 1}`} recommendedSize="1000x1000 px" />
                 </div>
               ))}
             </div>
