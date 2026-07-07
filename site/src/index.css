@@ -38,6 +38,7 @@ html {
   /* Firefox */
   -ms-overflow-style: none;
   /* IE and Edge */
+  overflow-x: hidden;
 }
 
 body {
@@ -3245,6 +3246,7 @@ h6 {
 .review-card-premium {
   position: relative;
   flex: 0 0 calc(25% - 18px);
+  min-width: calc(25% - 18px);
   /* 4 cards per row on desktop */
   height: 380px;
   border-radius: 20px;
@@ -6042,11 +6044,30 @@ h6 {
 
   .product-detail-container {
     padding: 0;
+    overflow-x: hidden;
   }
 
   .breadcrumb-nav {
     padding: 16px 16px 0 16px;
     margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .breadcrumb-nav span {
+    white-space: nowrap;
+  }
+
+  .breadcrumb-nav .separator {
+    color: #999;
+    font-size: 14px;
+    font-weight: bold;
+  }
+
+  .breadcrumb-nav .current {
+    white-space: normal;
   }
 
   .product-detail-main {
@@ -6797,20 +6818,22 @@ h6 {
 
 @media (max-width: 768px) {
   .product-details-row {
-    flex-direction: column;
+    flex-direction: row;
   }
 
   .product-details-label {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid #e0e0e0;
-    padding: 12px 16px;
-    background-color: #f5f4f2;
+    width: 40%;
+    border-right: 1px solid #e0e0e0;
+    border-bottom: none;
+    padding: 12px 12px;
+    background-color: transparent;
+    font-size: 13px;
   }
 
   .product-details-value {
-    width: 100%;
-    padding: 12px 16px;
+    width: 60%;
+    padding: 12px 12px;
+    font-size: 13px;
   }
 }
 
@@ -7767,4 +7790,15 @@ h6 {
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.padded-section {
+  padding-left: 135px;
+  padding-right: 135px;
+}
+@media (max-width: 768px) {
+  .padded-section {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
 }

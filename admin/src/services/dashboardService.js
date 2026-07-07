@@ -69,13 +69,17 @@ export const dashboardService = {
         sku_id,
         sku_code,
         available_stock,
-        skus ( reorder_level, products ( name ) )
+        skus!inner ( reorder_level, deleted_at, is_active, products!inner ( name, deleted_at, is_active ) )
       `);
       
     if (error) throw error;
     
-    // Filter locally since postgREST doesn't easily let us compare two columns across a join without an RPC or View
+    // Filter locally since postgREST doesn't always handle joined table filters perfectly
     const lowStock = data.filter(item => {
+      // Check if SKU or Product is deleted or inactive
+      if (!item.skus || item.skus.deleted_at != null || item.skus.is_active === false) return false;
+      if (!item.skus.products || item.skus.products.deleted_at != null || item.skus.products.is_active === false) return false;
+      
       const reorderLevel = item.skus?.reorder_level || 0;
       return item.available_stock <= reorderLevel;
     });

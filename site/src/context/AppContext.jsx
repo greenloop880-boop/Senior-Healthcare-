@@ -114,7 +114,8 @@ export const AppProvider = ({ children }) => {
 
     // Initialize the very first history state correctly
     const initialRoute = getInitialRoute();
-    window.history.replaceState(initialRoute, "", window.location.hash || "#home");
+    const initHash = window.location.hash || (initialRoute.pageName === 'home' && Object.keys(initialRoute.params).length === 0 ? window.location.pathname : "#home");
+    window.history.replaceState(initialRoute, "", initHash);
 
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
@@ -169,10 +170,12 @@ export const AppProvider = ({ children }) => {
 
   const navigateTo = (pageName, params = {}) => {
     // Push new state to browser history with query params
-    let hash = "#" + pageName;
+    let hash = pageName === 'home' ? "" : "#" + pageName;
     const query = new URLSearchParams(params).toString();
-    if (query) hash += "?" + query;
-    window.history.pushState({ pageName, params }, "", hash);
+    if (query) {
+      hash = (hash === "" ? "#home" : hash) + "?" + query;
+    }
+    window.history.pushState({ pageName, params }, "", hash || window.location.pathname);
 
     setCurrentPage(pageName);
     setCurrentPageParams(params);

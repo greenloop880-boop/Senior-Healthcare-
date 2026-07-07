@@ -46,9 +46,34 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
   useEffect(() => {
     if (editingProduct) {
       const p = typeof editingProduct === 'object' ? editingProduct : null;
-      // In a real app we'd fetch the product by ID here if only ID was passed, 
-      // but assuming the full object is passed for now or we just map what we have.
-      // We will leave this stubbed as requested to avoid breaking unless we have the full product object.
+      if (p) {
+        setFormData({
+          name: p.name || '',
+          short_description: p.short_description || '',
+          description: p.description || '',
+          internal_code: p.internal_code || '',
+          category_id: p.category_id || '',
+          brand_id: p.brand_id || '',
+          selectedConcerns: p.product_concerns?.map(c => c.concern_id) || [],
+          image_url: p.image_url || '',
+          images: p.images || [],
+          detail_banners: p.metadata?.detail_banners || ['', '', '', ''],
+          attributes: [{ name: '', values: '' }],
+          skus: p.skus?.length > 0 ? p.skus.map(s => ({
+            id: s.id, sku_code: s.sku_code || '', variant_name: s.variant_name || '',
+            mrp: s.mrp || 0, selling_price: s.selling_price || 0, purchase_cost: s.average_cost || 0,
+            reorder_level: s.reorder_level || 10
+          })) : [{ sku_code: '', variant_name: '', mrp: 0, selling_price: 0, purchase_cost: 0, gst_percent: 18, reorder_level: 10, maximum_stock: 100, safety_stock: 5, barcode: '', weight: '', length: '', width: '', height: '' }],
+          openingStock: 0,
+          metadata: p.metadata || { net_quantity: '', country_of_origin: '', generic_name: '', marketed_by: '', included_components: '', customer_care_details: '', manufacturer_details: '', faqs: [] },
+          meta_title: p.meta_title || '',
+          meta_description: p.meta_description || '',
+          url_slug: p.url_slug || '',
+          canonical_url: p.canonical_url || '',
+          og_image: p.og_image || '',
+          is_active: p.is_active !== false
+        });
+      }
     }
   }, [editingProduct]);
 
@@ -101,26 +126,25 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
         imageUrl = await uploadToR2(imageFile, 'products');
       }
 
-      const galleryUrls = [];
-      for (const file of galleryFiles) {
-        if (file) {
-          const url = await uploadToR2(file, 'products');
-          galleryUrls.push(url);
+      const finalGalleryUrls = [...(formData.images || [])];
+      for (let i = 0; i < 4; i++) {
+        if (galleryFiles[i]) {
+          const url = await uploadToR2(galleryFiles[i], 'products');
+          finalGalleryUrls[i] = url;
         }
       }
+      const cleanedGalleryUrls = finalGalleryUrls.filter(Boolean);
 
-      const bannerUrls = [];
-      for (const file of bannerFiles) {
-        if (file) {
-          const url = await uploadToR2(file, 'products');
-          bannerUrls.push(url);
-        } else {
-          bannerUrls.push(''); // Maintain array length of 4
+      const finalBannerUrls = [...(formData.detail_banners || ['', '', '', ''])];
+      for (let i = 0; i < 4; i++) {
+        if (bannerFiles[i]) {
+          const url = await uploadToR2(bannerFiles[i], 'products');
+          finalBannerUrls[i] = url;
         }
       }
 
       // 2. Prepare Payload
-      const finalMetadata = { ...formData.metadata, detail_banners: bannerUrls };
+      const finalMetadata = { ...formData.metadata, detail_banners: finalBannerUrls };
       const payload = {
         name: formData.name,
         slug: formData.url_slug || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
@@ -131,7 +155,7 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
         description: formData.description,
         is_active: formData.is_active,
         image_url: imageUrl,
-        images: galleryUrls.length > 0 ? galleryUrls : formData.images,
+        images: cleanedGalleryUrls,
         metadata: finalMetadata,
         skus: formData.skus,
         selectedConcerns: formData.selectedConcerns,
@@ -435,13 +459,24 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
       </div>
 
       {/* Footer Navigation */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '32px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '32px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
         <button type="button" className="btn-secondary" onClick={handlePrev} disabled={currentStep === 0}>Previous Step</button>
-        {currentStep < WIZARD_STEPS.length - 1 ? (
-          <button type="button" className="btn-primary" onClick={handleNext}>Next Step</button>
-        ) : (
-          <div></div> // Spacer
-        )}
+        
+        <div style={{ display: 'flex', gap: '16px' }}>
+          {editingProduct && currentStep < WIZARD_STEPS.length - 1 && (
+            <button type="button" className="btn-primary" onClick={handleSave} disabled={isSaving} style={{ backgroundColor: '#10b981' }}>
+              {isSaving ? 'Saving...' : 'Save Changes Now'}
+            </button>
+          )}
+
+          {currentStep < WIZARD_STEPS.length - 1 ? (
+            <button type="button" className="btn-primary" onClick={handleNext}>Next Step</button>
+          ) : (
+             <button type="button" className="btn-primary" onClick={handleSave} disabled={isSaving}>
+               {isSaving ? 'Saving...' : 'Finalize & Save Product'}
+             </button>
+          )}
+        </div>
       </div>
     </div>
   );

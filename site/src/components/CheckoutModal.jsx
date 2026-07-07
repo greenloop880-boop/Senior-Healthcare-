@@ -30,6 +30,24 @@ export default function CheckoutModal() {
     full_name: '', phone: '', address_line1: '', address_line2: '', pincode: '', city: '', state: ''
   });
 
+  const [isOrderSuccessProcessing, setIsOrderSuccessProcessing] = useState(false);
+
+  const finalizeOrderAndNavigate = (orderId, isCOD) => {
+    setIsOrderSuccessProcessing(true);
+    if (buyNowItem) {
+      setBuyNowItem(null);
+    } else {
+      checkoutCart.forEach(item => removeFromCart(item.cartItemId || item.product.id));
+    }
+    
+    setTimeout(() => {
+      setIsCheckoutModalOpen(false);
+      setIsOrderSuccessProcessing(false);
+      navigateTo('order-success', { orderId: orderId, isCOD: isCOD });
+    }, 5000);
+  };
+
+
   const [userSession, setUserSession] = useState(null);
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('razorpay');
@@ -77,6 +95,10 @@ export default function CheckoutModal() {
   const handleSaveNewAddress = async () => {
     if (!newAddress.full_name || !newAddress.phone || !newAddress.address_line1 || !newAddress.pincode || !newAddress.city || !newAddress.state) {
       showToast("Please fill all required address fields.");
+      return;
+    }
+    if (!/^\d{6}$/.test(newAddress.pincode)) {
+      showToast("Please enter a valid 6-digit PIN code.");
       return;
     }
     
@@ -191,13 +213,7 @@ export default function CheckoutModal() {
              alert("Payment verification failed: " + exactError); // Ensure user sees it
           } else {
             showToast("Payment Successful! Your order has been placed.");
-            if (buyNowItem) {
-              setBuyNowItem(null);
-            } else {
-              checkoutCart.forEach(item => removeFromCart(item.cartItemId || item.product.id));
-            }
-            setIsCheckoutModalOpen(false);
-            navigateTo('order-success', { orderId: verificationData.orderId || 'CONFIRMED', isCOD: false }); 
+            finalizeOrderAndNavigate(verificationData.orderId || 'CONFIRMED', false); 
           }
         },
         prefill: {
@@ -275,13 +291,7 @@ export default function CheckoutModal() {
       }
       
       showToast("Order Placed Successfully via Cash on Delivery!");
-      if (buyNowItem) {
-        setBuyNowItem(null);
-      } else {
-        checkoutCart.forEach(item => removeFromCart(item.cartItemId || item.product.id));
-      }
-      setIsCheckoutModalOpen(false);
-      navigateTo('order-success', { orderId: orderId, isCOD: true }); 
+      finalizeOrderAndNavigate(orderId, true); 
     } catch (error) {
       console.error(error);
       showToast("Failed to place order.");
@@ -310,8 +320,19 @@ export default function CheckoutModal() {
 
   return (
     <div className="checkout-modal-overlay">
-      <div className="checkout-modal-content animate-slide-up">
+      <div className="checkout-modal-content animate-slide-up" style={{ position: 'relative' }}>
         
+        {isOrderSuccessProcessing && (
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(255,255,255,0.98)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 1000, borderRadius: '24px' }}>
+            <div style={{ width: '60px', height: '60px', border: '5px solid #E5E7EB', borderTopColor: '#10B981', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '24px' }}></div>
+            <h2 style={{ fontSize: '24px', color: '#111827', fontWeight: 'bold' }}>Processing Order</h2>
+            <p style={{ color: '#6B7280', marginTop: '8px', fontSize: '15px' }}>Please wait, do not refresh or close.</p>
+            <style dangerouslySetInnerHTML={{__html: `
+              @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+            `}} />
+          </div>
+        )}
+
         {/* Header */}
         <div className="checkout-modal-header">
           <div className="ch-logo-wrapper" style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
@@ -392,7 +413,7 @@ export default function CheckoutModal() {
                   <input type="text" placeholder="Full Name" value={newAddress.full_name} onChange={e => setNewAddress({...newAddress, full_name: e.target.value})} className="ch-input" />
                   <input type="text" placeholder="Phone" value={newAddress.phone} onChange={e => setNewAddress({...newAddress, phone: e.target.value})} className="ch-input" />
                   <input type="text" placeholder="Address" value={newAddress.address_line1} onChange={e => setNewAddress({...newAddress, address_line1: e.target.value})} className="ch-input" />
-                  <input type="text" placeholder="Pincode" value={newAddress.pincode} onChange={e => setNewAddress({...newAddress, pincode: e.target.value})} className="ch-input" />
+                  <input type="text" maxLength={6} placeholder="Pincode" value={newAddress.pincode} onChange={e => setNewAddress({...newAddress, pincode: e.target.value.replace(/\\D/g, '')})} className="ch-input" />
                   <div style={{display:'flex', gap:'10px'}}>
                      <input type="text" placeholder="City" value={newAddress.city} onChange={e => setNewAddress({...newAddress, city: e.target.value})} className="ch-input" />
                      <input type="text" placeholder="State" value={newAddress.state} onChange={e => setNewAddress({...newAddress, state: e.target.value})} className="ch-input" />

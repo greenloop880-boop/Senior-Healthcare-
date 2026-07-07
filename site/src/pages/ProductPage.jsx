@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDownIcon, StarIcon, UserIcon, CloseIcon } from '../components/Icons';
 
 import { useAppContext } from '../context/AppContext';
@@ -139,7 +139,12 @@ const renderHighlightIcon = (iconName) => {
 };
 
 export default function ProductPage() {
-  const { currentPageParams, navigateTo, addToCart, setIsCheckoutModalOpen, setIsCartOpen, showToast } = useAppContext();
+  const [writeReviewModalOpen, setWriteReviewModalOpen] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const { 
+    currentPageParams, navigateTo, addToCart, setIsCheckoutModalOpen, setIsCartOpen, showToast 
+  } = useAppContext();
+
   const prodId = currentPageParams.productId;
   const queryClient = useQueryClient();
 
@@ -277,6 +282,7 @@ export default function ProductPage() {
   const thumbnails = [prod.image_url, ...validGallery].filter(Boolean);
 
   return (
+    <>
     <div className="product-detail-container animate-fade">
       <div className="breadcrumb-nav">
         <span onClick={() => navigateTo('home')}>Home</span>
@@ -434,9 +440,10 @@ export default function ProductPage() {
             <div className="pincode-input-group">
               <input
                 type="text"
+                maxLength={6}
                 placeholder="Enter PIN code"
                 value={pincode}
-                onChange={e => setPincode(e.target.value)}
+                onChange={e => setPincode(e.target.value.replace(/\\D/g, ''))}
               />
               <button className="btn-pincode-check" onClick={() => showToast("Delivery available at this PIN code!")}>Check</button>
             </div>
@@ -448,9 +455,10 @@ export default function ProductPage() {
             <div style={{ display: 'flex', alignItems: 'center', background: '#F5F5F5', borderRadius: '12px', padding: '6px' }}>
               <input
                 type="text"
+                maxLength={6}
                 placeholder="Enter PIN code"
                 value={pincode}
-                onChange={e => setPincode(e.target.value)}
+                onChange={e => setPincode(e.target.value.replace(/\\D/g, ''))}
                 style={{ flex: 1, background: 'transparent', border: 'none', padding: '10px 12px', fontSize: '16px', outline: 'none' }}
               />
               <button onClick={() => showToast("Delivery available at this PIN code!")} style={{ background: 'transparent', color: 'var(--primary-red)', border: '1px solid var(--primary-red)', borderRadius: '30px', padding: '8px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Check</button>
@@ -584,7 +592,7 @@ export default function ProductPage() {
           </div>
           <p className="global-ratings-text">{prod.reviews_count || 0} global ratings</p>
 
-          <button className="write-review-btn">Write a review</button>
+          <button className="write-review-btn" onClick={() => setWriteReviewModalOpen(true)}>Write a review</button>
         </div>
 
         <div className="reviews-list-col">
@@ -709,7 +717,51 @@ export default function ProductPage() {
         </div>
       </section>
 
+      </div>
 
-    </div>
+      {writeReviewModalOpen && (
+        <div className="modal-overlay" onClick={() => setWriteReviewModalOpen(false)}>
+          <div className="testimonial-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px', flexDirection: 'column', display: 'flex', padding: '24px' }}>
+            <button className="quickview-close-btn" onClick={() => setWriteReviewModalOpen(false)} aria-label="Close">
+              <CloseIcon />
+            </button>
+            <h2 style={{ marginBottom: '20px', fontSize: '24px', fontWeight: '600' }}>Write a Review</h2>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              showToast("Thank you! Your review has been submitted and is pending approval.");
+              setWriteReviewModalOpen(false);
+            }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Rating</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {[...Array(5)].map((_, i) => (
+                    <span 
+                      key={i} 
+                      onClick={() => setReviewRating(i + 1)} 
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <StarIcon filled={i < reviewRating} />
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Review Title</label>
+                <input type="text" required placeholder="Summarize your experience" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Your Review</label>
+                <textarea required placeholder="What did you like or dislike? What should other shoppers know?" rows="4" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontFamily: 'inherit' }}></textarea>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Your Name</label>
+                <input type="text" required placeholder="How should your name appear?" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
+              </div>
+              <button type="submit" className="btn-primary-sm" style={{ marginTop: '12px', padding: '14px', fontSize: '15px' }}>Submit Review</button>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

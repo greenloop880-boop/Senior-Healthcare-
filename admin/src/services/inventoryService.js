@@ -51,9 +51,8 @@ export const inventoryService = {
         transaction_type: 'MANUAL_ADJUSTMENT',
         quantity_change,
         unit_cost: unit_cost || 0,
-        reference_type: 'REASON_CODE',
-        reference_id: reason_code,
-        notes
+        reference_type: 'MANUAL_ADJUSTMENT',
+        reference_id: reason_code
       }]);
     
     if (tError) throw tError;

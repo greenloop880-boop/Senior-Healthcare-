@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../config/supabaseClient';
 import { SearchIcon } from './Icons';
+import OrderStatusBadge from './OrderStatusBadge';
 
 export default function TrackOrder({ initialOrderId = '' }) {
   const [orderId, setOrderId] = useState(initialOrderId);
@@ -133,18 +134,20 @@ export default function TrackOrder({ initialOrderId = '' }) {
               </p>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <span style={{ 
-                display: 'inline-block', 
-                padding: '6px 12px', 
-                borderRadius: '20px', 
-                fontSize: '12px', 
-                fontWeight: '700', 
-                backgroundColor: orderData.status === 'CANCELLED' ? '#FEE2E2' : '#ECFCCB',
-                color: orderData.status === 'CANCELLED' ? '#991B1B' : '#3F6212',
-                textTransform: 'uppercase'
-              }}>
-                {orderData.status}
-              </span>
+              <OrderStatusBadge 
+                status={orderData.status} 
+                paymentGateway={orderData.payments?.[0]?.gateway} 
+                createdAt={orderData.created_at} 
+                inlineStyle={{ 
+                  padding: '6px 12px', 
+                  borderRadius: '20px', 
+                  fontSize: '12px', 
+                  fontWeight: '700', 
+                  backgroundColor: orderData.status === 'CANCELLED' ? '#FEE2E2' : '#ECFCCB',
+                  color: orderData.status === 'CANCELLED' ? '#991B1B' : '#3F6212',
+                  textTransform: 'uppercase'
+                }} 
+              />
             </div>
           </div>
 

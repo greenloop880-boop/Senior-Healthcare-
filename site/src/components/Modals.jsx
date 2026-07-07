@@ -60,15 +60,7 @@ export default function Modals() {
     allProductsList, navigateTo, addToCart, showToast, submitCallbackRequest
   } = useAppContext();
 
-  const getProductForReview = (author) => {
-    if (!author) return null;
-    const authorLower = author.toLowerCase();
-    if (authorLower.includes("anuradha")) return allProductsList.find(p => p.id === "ankle-brace");
-    if (authorLower.includes("sanjay")) return allProductsList.find(p => p.id === "hinged-stabilizer");
-    if (authorLower.includes("debasis")) return allProductsList.find(p => p.id === "folding-wheelchair");
-    if (authorLower.includes("sachin") || authorLower.includes("sachir")) return allProductsList.find(p => p.id === "nebulizer-machine");
-    return null;
-  };
+  // Removed getProductForReview since allProductsList is no longer globally exported and it was hardcoded dummy logic
 
   const handleQuizAnswer = (optionIdx) => {
     const nextAnswers = { ...quizAnswers, [currentQuizStep]: optionIdx };
@@ -347,7 +339,7 @@ export default function Modals() {
               <CloseIcon />
             </button>
             <div className="testimonial-modal-left">
-              <img src={activeReviewDetail.bgImage} alt={activeReviewDetail.author} />
+              <img src={activeReviewDetail.bg_image_url || activeReviewDetail.bgImage} alt={activeReviewDetail.author} />
             </div>
             <div className="testimonial-modal-right">
               <div>
@@ -363,35 +355,19 @@ export default function Modals() {
                 </div>
                 <h2 className="testimonial-modal-title">{activeReviewDetail.title}</h2>
                 <div className="testimonial-modal-text">
-                  "{activeReviewDetail.text}"
+                  "{activeReviewDetail.review_text || activeReviewDetail.text}"
                 </div>
                 <div className="testimonial-modal-author" style={{ marginTop: '16px' }}>
                   - {activeReviewDetail.author}
                 </div>
               </div>
 
-              {(() => {
-                const linkedProduct = getProductForReview(activeReviewDetail.author);
-                if (!linkedProduct) return null;
-                return (
-                  <div className="testimonial-product-card">
-                    <img src={linkedProduct.image} alt={linkedProduct.title} className="testimonial-product-img" />
-                    <div className="testimonial-product-info">
-                      <h4 className="testimonial-product-title">{linkedProduct.title}</h4>
-                      <span className="testimonial-product-price">₹{linkedProduct.price}</span>
-                    </div>
-                    <button
-                      className="testimonial-product-btn"
-                      onClick={() => {
-                        addToCart(linkedProduct);
-                        setActiveReviewDetail(null);
-                      }}
-                    >
-                      ADD TO CART
-                    </button>
-                  </div>
-                );
-              })()}
+              {activeReviewDetail.product_icon_url && (
+                <div style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f8fafc', borderRadius: '8px' }}>
+                  <img src={activeReviewDetail.product_icon_url} alt="Product Icon" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
+                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#334155' }}>Reviewed Product</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

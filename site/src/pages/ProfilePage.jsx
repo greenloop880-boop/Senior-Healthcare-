@@ -2,13 +2,24 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { supabase } from '../config/supabaseClient';
 import TrackOrder from '../components/TrackOrder';
+import OrderStatusBadge from '../components/OrderStatusBadge';
 
 export default function ProfilePage() {
-  const { navigateTo, setHelpFormOpen, showToast, saveUserProfileToDb, userSession, userProfile, userAvatar, setUserAvatar } = useAppContext();
+  const { navigateTo, currentPageParams, setHelpFormOpen, showToast, saveUserProfileToDb, userSession, userProfile, userAvatar, setUserAvatar } = useAppContext();
 
-  const [activeTab, setActiveTab] = useState('account');
-  const [mobileActiveView, setMobileActiveView] = useState('menu');
-  const [trackOrderId, setTrackOrderId] = useState('');
+  const [activeTab, setActiveTab] = useState(currentPageParams?.activeTab || 'account');
+  const [mobileActiveView, setMobileActiveView] = useState(currentPageParams?.activeTab ? 'content' : 'menu');
+  const [trackOrderId, setTrackOrderId] = useState(currentPageParams?.orderId || '');
+
+  useEffect(() => {
+    if (currentPageParams?.activeTab) {
+      setActiveTab(currentPageParams.activeTab);
+      setMobileActiveView('content');
+      if (currentPageParams.orderId) {
+        setTrackOrderId(currentPageParams.orderId);
+      }
+    }
+  }, [currentPageParams]);
   const [isEditing, setIsEditing] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -160,6 +171,10 @@ export default function ProfilePage() {
   const handleSaveNewAddress = async () => {
     if (!newAddress.full_name || !newAddress.phone || !newAddress.address_line1 || !newAddress.pincode || !newAddress.city || !newAddress.state) {
       showToast("Please fill all required address fields.");
+      return;
+    }
+    if (!/^\d{6}$/.test(newAddress.pincode)) {
+      showToast("Please enter a valid 6-digit PIN code.");
       return;
     }
 
@@ -470,9 +485,7 @@ export default function ProfilePage() {
                           <span className="order-id">Order #{order.id.substring(0, 8).toUpperCase()}</span>
                           <span className="order-date">Placed on {new Date(order.created_at).toLocaleDateString()}</span>
                         </div>
-                        <div className="order-status-badge" data-status={order.status}>
-                          {order.status}
-                        </div>
+                        <OrderStatusBadge status={order.status} paymentGateway={order.payments?.[0]?.gateway} createdAt={order.created_at} />
                       </div>
 
                       <div className="order-card-body">
@@ -618,7 +631,7 @@ export default function ProfilePage() {
                 <input type="text" placeholder="Address Line 1 (House No, Building, Street) *" value={newAddress.address_line1} onChange={e => setNewAddress({ ...newAddress, address_line1: e.target.value })} className="profile-input" style={{ marginTop: '20px' }} />
                 <input type="text" placeholder="Address Line 2 (Locality, Area)" value={newAddress.address_line2} onChange={e => setNewAddress({ ...newAddress, address_line2: e.target.value })} className="profile-input" style={{ marginTop: '20px' }} />
                 <div className="form-grid-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginTop: '20px' }}>
-                  <input type="text" placeholder="PIN Code *" value={newAddress.pincode} onChange={e => setNewAddress({ ...newAddress, pincode: e.target.value })} className="profile-input" />
+                  <input type="text" maxLength={6} placeholder="PIN Code *" value={newAddress.pincode} onChange={e => setNewAddress({ ...newAddress, pincode: e.target.value.replace(/\\D/g, '') })} className="profile-input" />
                   <input type="text" placeholder="City *" value={newAddress.city} onChange={e => setNewAddress({ ...newAddress, city: e.target.value })} className="profile-input" />
                   <input type="text" placeholder="State *" value={newAddress.state} onChange={e => setNewAddress({ ...newAddress, state: e.target.value })} className="profile-input" />
                 </div>

@@ -198,15 +198,13 @@ export default function HomePage() {
   };
 
   // Scroll and dot navigation for premium customer reviews
-  const handleReviewsScroll = () => {
-    if (reviewsScrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = reviewsScrollRef.current;
-      const maxScrollLeft = scrollWidth - clientWidth;
-      if (maxScrollLeft > 0) {
-        const scrollPercent = scrollLeft / maxScrollLeft;
-        setCurrentScrollDot(scrollPercent > 0.5 ? 1 : 0);
-      }
-    }
+  const handleReviewsScroll = (e) => {
+    const scrollLeft = e.target.scrollLeft;
+    const clientWidth = e.target.clientWidth;
+    const scrollWidth = e.target.scrollWidth;
+
+    if (scrollLeft < clientWidth / 2) setCurrentScrollDot(0);
+    else if (scrollLeft > scrollWidth - clientWidth * 1.5) setCurrentScrollDot(1);
   };
 
   const handleReviewsDotClick = (dotIdx) => {
@@ -218,7 +216,6 @@ export default function HomePage() {
       setCurrentScrollDot(dotIdx);
     }
   };
-
   const startQuiz = (quizId) => {
     setActiveQuizId(quizId);
   };
@@ -544,7 +541,7 @@ export default function HomePage() {
       </section>
 
       {/* FEATURED COMMUNITY VIDEO */}
-      <section className="section-container" id="featured-video" style={{ paddingLeft: '135px', paddingRight: '135px' }}>
+      <section className="section-container padded-section" id="featured-video">
         <div className="section-heading-wrapper" style={{ paddingTop: '30px', paddingBottom: '0px' }}>
           <h2 className="section-heading">HEAR FROM THE Senior Anandam COMMUNITY</h2>
         </div>
@@ -602,7 +599,7 @@ export default function HomePage() {
       </section>
 
       {/* CUSTOMER REVIEW (Premium senior portrait slider) */}
-      <section className="section-container" id="reviews" style={{ paddingTop: '20px', paddingLeft: '135px', paddingRight: '135px' }}>
+      <section className="section-container padded-section" id="reviews" style={{ paddingTop: '20px' }}>
         <div className="section-heading-wrapper" style={{ marginBottom: '24px' }}>
           <h2 className="section-heading">CUSTOMER REVIEW</h2>
         </div>
