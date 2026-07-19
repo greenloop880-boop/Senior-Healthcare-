@@ -290,6 +290,15 @@ export default function CheckoutModal() {
         throw new Error("Could not place order");
       }
       
+      // Deduct Inventory for COD orders using Edge Function
+      await supabase.functions.invoke('razorpay', {
+        body: {
+          action: 'reserve_inventory',
+          orderId: orderId,
+          cartItems: checkoutCart
+        }
+      });
+      
       showToast("Order Placed Successfully via Cash on Delivery!");
       finalizeOrderAndNavigate(orderId, true); 
     } catch (error) {

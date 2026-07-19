@@ -128,7 +128,44 @@ serve(async (req) => {
       }]);
       if (paymentError) throw paymentError;
 
+      // 5. Reserve Inventory
+      const { data: defaultWh } = await supabase.from('warehouses').select('id').limit(1).single();
+      const warehouseId = defaultWh ? defaultWh.id : null;
+      if (warehouseId) {
+        const inventoryTxns = cartItems.map((item: any) => ({
+          sku_id: item.selectedSku ? item.selectedSku.id : (item.product.skus && item.product.skus.length > 0 ? item.product.skus[0].id : null),
+          warehouse_id: warehouseId,
+          transaction_type: 'RESERVE',
+          quantity_change: item.quantity,
+          unit_cost: 0,
+          reference_type: 'ORDER',
+          reference_id: order.id
+        }));
+        await supabase.from('inventory_transactions').insert(inventoryTxns);
+      }
+
       return new Response(JSON.stringify({ success: true, orderId: order.id }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'reserve_inventory') {
+      const { orderId, cartItems } = payload;
+      const { data: defaultWh } = await supabase.from('warehouses').select('id').limit(1).single();
+      const warehouseId = defaultWh ? defaultWh.id : null;
+      if (warehouseId) {
+        const inventoryTxns = cartItems.map((item: any) => ({
+          sku_id: item.selectedSku ? item.selectedSku.id : (item.product.skus && item.product.skus.length > 0 ? item.product.skus[0].id : null),
+          warehouse_id: warehouseId,
+          transaction_type: 'RESERVE',
+          quantity_change: item.quantity,
+          unit_cost: 0,
+          reference_type: 'ORDER',
+          reference_id: orderId
+        }));
+        await supabase.from('inventory_transactions').insert(inventoryTxns);
+      }
+      return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -184,6 +221,24 @@ serve(async (req) => {
       // Also update shipment status to CANCELLED if it exists
       if (shipment) {
         await supabase.from('shipments').update({ status: 'CANCELLED' }).eq('id', shipment.id);
+      }
+      
+      // Restore Inventory
+      const { data: items } = await supabase.from('order_items').select('sku_id, quantity, unit_cost').eq('order_id', order_id);
+      if (items && items.length > 0) {
+        const warehouseId = order.fulfillment_warehouse_id || (await supabase.from('warehouses').select('id').limit(1).single()).data?.id;
+        if (warehouseId) {
+          const restockTxns = items.map((item: any) => ({
+            sku_id: item.sku_id,
+            warehouse_id: warehouseId,
+            transaction_type: 'RESTOCK_CANCEL',
+            quantity_change: item.quantity,
+            unit_cost: item.unit_cost,
+            reference_type: 'ORDER',
+            reference_id: order_id
+          }));
+          await supabase.from('inventory_transactions').insert(restockTxns);
+        }
       }
       
       return new Response(JSON.stringify({ success: true, message: "Order cancelled and refunded successfully" }), {

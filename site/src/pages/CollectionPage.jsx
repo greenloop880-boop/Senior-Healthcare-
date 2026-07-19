@@ -46,7 +46,7 @@ export default function CollectionPage() {
         .select(`
           *,
           categories ( name ),
-          skus ( id, selling_price, mrp ),
+          skus ( id, sku_code, variant_name, selling_price, mrp, inventory(quantity_available) ),
           product_concerns ( concerns ( name ) )
         `)
         .eq('is_active', true);
@@ -55,8 +55,7 @@ export default function CollectionPage() {
 
       return (data || []).map(p => {
         const defaultSku = p.skus && p.skus.length > 0 ? p.skus[0] : null;
-        const price = defaultSku ? Number(defaultSku.selling_price) : 0;
-        const mrp = defaultSku ? Number(defaultSku.mrp) : 0;
+        const totalStock = p.skus?.reduce((sum, sku) => sum + (sku.inventory?.reduce((invSum, inv) => invSum + (inv.quantity_available || 0), 0) || 0), 0) || 0;
         const category_title = p.categories ? p.categories.name : 'Uncategorized';
         const concern_title = p.product_concerns && p.product_concerns.length > 0 && p.product_concerns[0].concerns
           ? p.product_concerns[0].concerns.name
@@ -67,10 +66,12 @@ export default function CollectionPage() {
           title: p.name,
           category_title,
           concern_title,
-          price,
-          mrp,
-          discount: (mrp > 0 && price < mrp)
-            ? Math.round(((mrp - price) / mrp) * 100) + '% off'
+          price: defaultSku ? Number(defaultSku.selling_price) : 0,
+          mrp: defaultSku ? Number(defaultSku.mrp) : 0,
+          totalStock,
+          image: p.image_url,
+          discount: (defaultSku && defaultSku.mrp > 0 && defaultSku.selling_price < defaultSku.mrp)
+            ? Math.round(((Number(defaultSku.mrp) - Number(defaultSku.selling_price)) / Number(defaultSku.mrp)) * 100) + '% off'
             : ''
         };
       });
@@ -98,6 +99,7 @@ export default function CollectionPage() {
       const { data, error } = await supabase
         .from('categories')
         .select('*')
+        .is('deleted_at', null)
         .eq('is_active', true);
 
       if (error) throw error;
@@ -141,8 +143,8 @@ export default function CollectionPage() {
     // Filter by Availability
     if (selectedAvailability !== 'All Products') {
       filtered = filtered.filter(p => {
-        if (selectedAvailability === 'In Stock') return true;
-        if (selectedAvailability === 'Out of Stock') return false;
+        if (selectedAvailability === 'In Stock') return p.totalStock > 0;
+        if (selectedAvailability === 'Out of Stock') return p.totalStock <= 0;
         return true;
       });
     }
@@ -168,7 +170,7 @@ export default function CollectionPage() {
     } else if (catalogSort === "price-high") {
       filtered.sort((a, b) => b.price - a.price);
     } else if (catalogSort === "rating") {
-      filtered.sort((a, b) => b.rating - a.rating);
+      filtered.sort((a, b) => a.rating - b.rating);
     } else if (catalogSort === "alpha") {
       filtered.sort((a, b) => a.title.localeCompare(b.title));
     } else if (catalogSort === "discount-low") {
@@ -438,20 +440,38 @@ export default function CollectionPage() {
                       <button
                         className="btn-secondary-sm mobile-hide"
                         onClick={() => addToCart(prod)}
+                        disabled={prod.totalStock <= 0}
+                        style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1, cursor: prod.totalStock <= 0 ? 'not-allowed' : 'pointer' }}
                       >
-                        Add to Cart
+                        {prod.totalStock <= 0 ? 'Out of Stock' : 'Add to Cart'}
                       </button>
                       <button
                         className="btn-primary-sm mobile-hide"
                         onClick={() => triggerBuyNow(prod)}
+                        disabled={prod.totalStock <= 0}
+                        style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1, cursor: prod.totalStock <= 0 ? 'not-allowed' : 'pointer' }}
                       >
-                        Buy Now
+                        {prod.totalStock <= 0 ? 'Out of Stock' : 'Buy Now'}
                       </button>
                     </div>
                   </div>
                   <div className="mobile-buttons-row desktop-hide">
-                    <button className="btn-buy-now-mobile" onClick={() => triggerBuyNow(prod)}>Buy Now</button>
-                    <button className="btn-add-cart-mobile" onClick={() => addToCart(prod)}>Add to Cart</button>
+                    <button
+                      className="btn-buy-now-mobile"
+                      onClick={() => triggerBuyNow(prod)}
+                      disabled={prod.totalStock <= 0}
+                      style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1, cursor: prod.totalStock <= 0 ? 'not-allowed' : 'pointer' }}
+                    >
+                      {prod.totalStock <= 0 ? 'Out of Stock' : 'Buy Now'}
+                    </button>
+                    <button
+                      className="btn-add-cart-mobile"
+                      onClick={() => addToCart(prod)}
+                      disabled={prod.totalStock <= 0}
+                      style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1, cursor: prod.totalStock <= 0 ? 'not-allowed' : 'pointer' }}
+                    >
+                      {prod.totalStock <= 0 ? 'Out of Stock' : 'Add to Cart'}
+                    </button>
                   </div>
                 </div>
               ))}

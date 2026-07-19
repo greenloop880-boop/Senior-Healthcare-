@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 
-export default function DragDropImageUpload({ onFileSelect, required, label, recommendedSize, editing }) {
+export default function DragDropImageUpload({ onFileSelect, required, label, recommendedSize, editing, existingImage }) {
   const [isDragging, setIsDragging] = useState(false);
-  const [preview, setPreview] = useState(null);
+  const [preview, setPreview] = useState(existingImage || null);
   const [fileName, setFileName] = useState("");
   const fileInputRef = useRef(null);
 
@@ -110,7 +110,7 @@ export default function DragDropImageUpload({ onFileSelect, required, label, rec
           <div className="drag-drop-preview">
             <img src={preview} alt="Upload preview" />
             <div className="drag-drop-overlay">
-              <span>{fileName}</span>
+              <span>{fileName || 'Existing Image'}</span>
               <button type="button" className="remove-btn" onClick={handleRemove}>Change Image</button>
             </div>
           </div>

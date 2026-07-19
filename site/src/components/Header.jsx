@@ -142,7 +142,7 @@ export default function Header() {
   const { data: categoriesList = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
-      const { data } = await supabase.from('categories').select('*').eq('is_active', true);
+      const { data } = await supabase.from('categories').select('*').is('deleted_at', null).eq('is_active', true);
       return (data || []).map(c => ({ ...c, title: c.name }));
     }
   });

@@ -133,14 +133,16 @@ export default function HeroBannersManager() {
                 required={!editingBanner} 
                 label="Desktop Image" 
                 recommendedSize="1920x800 px" 
-                editing={editingBanner ? editingBanner.image_url : null} 
+                editing={!!editingBanner}
+                existingImage={editingBanner ? editingBanner.image_url : null} 
               />
               <DragDropImageUpload 
                 onFileSelect={setMobileImageFile} 
                 required={!editingBanner} 
                 label="Mobile Image" 
                 recommendedSize="800x1000 px" 
-                editing={editingBanner ? editingBanner.mobile_image_url : null} 
+                editing={!!editingBanner}
+                existingImage={editingBanner ? editingBanner.mobile_image_url : null} 
               />
               
               <div className="form-actions">

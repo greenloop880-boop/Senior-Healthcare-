@@ -13,7 +13,12 @@ export default function SearchPage() {
   const query = params.get('q') || "";
 
   // Perform fuzzy search
-  const list = useMemo(() => performSearch(query), [query, performSearch]);
+  const list = useMemo(() => {
+    return performSearch(query).map(p => {
+      const totalStock = p.skus?.reduce((sum, sku) => sum + (sku.inventory?.reduce((invSum, inv) => invSum + (inv.quantity_available || 0), 0) || 0), 0) || 0;
+      return { ...p, totalStock };
+    });
+  }, [query, performSearch]);
 
   return (
     <div className="section-container animate-fade" style={{ paddingTop: '20px', minHeight: '60vh' }}>
@@ -28,12 +33,11 @@ export default function SearchPage() {
         {list.length > 0 ? (
           <div className="products-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
             {list.map(prod => (
-              <div className="product-card" key={prod.id}>
                 <div
                   className="product-card-img-wrapper"
                   onClick={() => navigateTo('product-detail', { productId: prod.id })}
                 >
-                  <img src={prod.image_url} alt={prod.title} />
+                  <img src={prod.image} alt={prod.title} />
                   {prod.rating && (
                     <div className="mobile-rating-badge desktop-hide">
                       {prod.rating}<span style={{ color: '#FFD700', marginLeft: '2px' }}>★</span>
@@ -57,20 +61,24 @@ export default function SearchPage() {
                     <button
                       className="btn-secondary-sm mobile-hide"
                       onClick={() => addToCart(prod)}
+                      disabled={prod.totalStock <= 0}
+                      style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1, cursor: prod.totalStock <= 0 ? 'not-allowed' : 'pointer' }}
                     >
-                      Add to Cart
+                      {prod.totalStock <= 0 ? 'Out of Stock' : 'Add to Cart'}
                     </button>
                     <button
                       className="btn-primary-sm mobile-hide"
                       onClick={() => triggerBuyNow(prod)}
+                      disabled={prod.totalStock <= 0}
+                      style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1, cursor: prod.totalStock <= 0 ? 'not-allowed' : 'pointer' }}
                     >
-                      Buy Now
+                      {prod.totalStock <= 0 ? 'Out of Stock' : 'Buy Now'}
                     </button>
                   </div>
                 </div>
                 <div className="mobile-buttons-row desktop-hide">
-                  <button className="btn-buy-now-mobile" onClick={() => triggerBuyNow(prod)}>Buy Now</button>
-                  <button className="btn-add-cart-mobile" onClick={() => addToCart(prod)}>Add to Cart</button>
+                  <button className="btn-buy-now-mobile" onClick={() => triggerBuyNow(prod)} disabled={prod.totalStock <= 0} style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1 }}>{prod.totalStock <= 0 ? 'Out of Stock' : 'Buy Now'}</button>
+                  <button className="btn-add-cart-mobile" onClick={() => addToCart(prod)} disabled={prod.totalStock <= 0} style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1 }}>{prod.totalStock <= 0 ? 'Out of Stock' : 'Add to Cart'}</button>
                 </div>
               </div>
             ))}

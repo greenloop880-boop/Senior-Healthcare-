@@ -8,7 +8,7 @@ import { uploadToR2, deleteFromR2 } from '../config/r2Client';
 
 const WIZARD_STEPS = [
   'Basic Info', 'Categories & Brand', 'Images', 'Variants', 'Pricing', 
-  'Inventory', 'Shipping', 'SEO', 'Review & Publish'
+  'Inventory', 'Shipping', 'Additional Info', 'SEO', 'Review & Publish'
 ];
 
 export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
@@ -34,10 +34,10 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
     image_url: '', images: [], detail_banners: ['', '', '', ''],
     // Variant Engine (Attributes)
     attributes: [{ name: '', values: '' }], 
-    skus: [{ sku_code: '', variant_name: '', mrp: 0, selling_price: 0, purchase_cost: 0, gst_percent: 18, reorder_level: 10, maximum_stock: 100, safety_stock: 5, barcode: '', weight: '', length: '', width: '', height: '' }],
+    skus: [{ sku_code: '', variant_name: '', mrp: 0, selling_price: 0, purchase_cost: 0, gst_percent: 18, reorder_level: 10, maximum_stock: 100, safety_stock: 5, stock_adjustment: 0, barcode: '', weight: '', length: '', width: '', height: '' }],
     openingStock: 0,
     // Metadata
-    metadata: { net_quantity: '', country_of_origin: '', generic_name: '', marketed_by: '', included_components: '', customer_care_details: '', manufacturer_details: '', faqs: [] },
+    metadata: { net_quantity: '', country_of_origin: '', generic_name: '', marketed_by: '', included_components: '', customer_care_details: '', manufacturer_details: '', faqs: [], key_features: '', how_to_use: '' },
     // SEO
     meta_title: '', meta_description: '', url_slug: '', canonical_url: '', og_image: '',
     is_active: true
@@ -59,13 +59,16 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
           images: p.images || [],
           detail_banners: p.metadata?.detail_banners || ['', '', '', ''],
           attributes: [{ name: '', values: '' }],
-          skus: p.skus?.length > 0 ? p.skus.map(s => ({
-            id: s.id, sku_code: s.sku_code || '', variant_name: s.variant_name || '',
-            mrp: s.mrp || 0, selling_price: s.selling_price || 0, purchase_cost: s.average_cost || 0,
-            reorder_level: s.reorder_level || 10
-          })) : [{ sku_code: '', variant_name: '', mrp: 0, selling_price: 0, purchase_cost: 0, gst_percent: 18, reorder_level: 10, maximum_stock: 100, safety_stock: 5, barcode: '', weight: '', length: '', width: '', height: '' }],
+          skus: p.skus?.length > 0 ? p.skus.map(s => {
+            const currentStock = s.inventory ? s.inventory.reduce((acc, inv) => acc + (inv.quantity_available || 0), 0) : 0;
+            return {
+              id: s.id, sku_code: s.sku_code || '', variant_name: s.variant_name || '',
+              mrp: s.mrp || 0, selling_price: s.selling_price || 0, purchase_cost: s.average_cost || 0,
+              reorder_level: s.reorder_level || 10, stock_adjustment: 0, current_stock: currentStock
+            };
+          }) : [{ sku_code: '', variant_name: '', mrp: 0, selling_price: 0, purchase_cost: 0, gst_percent: 18, reorder_level: 10, maximum_stock: 100, safety_stock: 5, stock_adjustment: 0, current_stock: 0, barcode: '', weight: '', length: '', width: '', height: '' }],
           openingStock: 0,
-          metadata: p.metadata || { net_quantity: '', country_of_origin: '', generic_name: '', marketed_by: '', included_components: '', customer_care_details: '', manufacturer_details: '', faqs: [] },
+          metadata: p.metadata || { net_quantity: '', country_of_origin: '', generic_name: '', marketed_by: '', included_components: '', customer_care_details: '', manufacturer_details: '', faqs: [], key_features: '', how_to_use: '' },
           meta_title: p.meta_title || '',
           meta_description: p.meta_description || '',
           url_slug: p.url_slug || '',
@@ -107,11 +110,12 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
     if (combinations.length > 0) {
       const selectedBrand = brands?.find(b => b.id === formData.brand_id);
       const prefix = selectedBrand ? selectedBrand.brand_code : 'SA';
+      const baseCode = formData.internal_code || `${prefix}-${Date.now().toString(36).toUpperCase()}`;
       
       const newSkus = combinations.map((combo, idx) => ({
         ...formData.skus[0],
         variant_name: combo,
-        sku_code: `${prefix}-VAR-${String(idx+1).padStart(3, '0')}` // Simple generation for now
+        sku_code: `${baseCode}-${String(idx+1).padStart(2, '0')}`
       }));
       setFormData({ ...formData, skus: newSkus });
     }
@@ -143,21 +147,30 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
         }
       }
 
+      // Ensure all SKUs have a valid sku_code to prevent unique constraint errors
+      const processedSkus = formData.skus.map((sku, idx) => {
+        if (!sku.sku_code || sku.sku_code.trim() === '') {
+          const base = formData.internal_code || `SKU-${Date.now().toString(36).toUpperCase()}`;
+          return { ...sku, sku_code: `${base}-${String(idx+1).padStart(2, '0')}` };
+        }
+        return sku;
+      });
+
       // 2. Prepare Payload
       const finalMetadata = { ...formData.metadata, detail_banners: finalBannerUrls };
       const payload = {
         name: formData.name,
         slug: formData.url_slug || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
         internal_code: formData.internal_code,
-        category_id: formData.category_id || null,
-        brand_id: formData.brand_id || null,
+        category_id: formData.category_id === '' ? null : formData.category_id,
+        brand_id: formData.brand_id === '' ? null : formData.brand_id,
         short_description: formData.short_description,
         description: formData.description,
         is_active: formData.is_active,
         image_url: imageUrl,
         images: cleanedGalleryUrls,
         metadata: finalMetadata,
-        skus: formData.skus,
+        skus: processedSkus,
         selectedConcerns: formData.selectedConcerns,
         openingStock: Number(formData.openingStock),
         meta_title: formData.meta_title,
@@ -257,14 +270,14 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
           <div>
             <h4>Product Images & Media</h4>
             <p style={{ color: 'gray', fontSize: '14px', marginBottom: '16px' }}>Upload the main product image and gallery. (We preserve your existing upload logic here)</p>
-            <DragDropImageUpload onFileSelect={setImageFile} label="Primary Cover Image" recommendedSize="1000x1000 px" />
+            <DragDropImageUpload onFileSelect={setImageFile} existingImage={formData.image_url} label="Primary Cover Image" recommendedSize="1000x1000 px" />
             <h5 style={{ marginTop: '24px' }}>Gallery Images</h5>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               {[0, 1, 2, 3].map(idx => (
                 <div key={idx} className="form-group" style={{ border: '1px solid #e2e8f0', padding: '10px', borderRadius: '6px', backgroundColor: '#f8fafc' }}>
                   <DragDropImageUpload onFileSelect={(file) => {
                     const newFiles = [...galleryFiles]; newFiles[idx] = file; setGalleryFiles(newFiles);
-                  }} label={`Gallery Image ${idx + 1}`} recommendedSize="1000x1000 px" />
+                  }} existingImage={formData.images[idx]} label={`Gallery Image ${idx + 1}`} recommendedSize="1000x1000 px" />
                 </div>
               ))}
             </div>
@@ -275,7 +288,7 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
                 <div key={idx} className="form-group" style={{ border: '1px solid #e2e8f0', padding: '10px', borderRadius: '6px', backgroundColor: '#f8fafc' }}>
                   <DragDropImageUpload onFileSelect={(file) => {
                     const newFiles = [...bannerFiles]; newFiles[idx] = file; setBannerFiles(newFiles);
-                  }} label={`Feature Banner ${idx + 1}`} recommendedSize="1000x1000 px" />
+                  }} existingImage={formData.detail_banners && formData.detail_banners[idx]} label={`Feature Banner ${idx + 1}`} recommendedSize="1000x1000 px" />
                 </div>
               ))}
             </div>
@@ -364,11 +377,19 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
 
         {currentStep === 5 && (
           <div>
-            <h4>Inventory Settings</h4>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h4 style={{ margin: 0 }}>Inventory Settings</h4>
+              <div style={{ background: '#e0f2fe', color: '#0369a1', padding: '6px 12px', borderRadius: '4px', fontWeight: 'bold' }}>
+                Total Stock: {formData.skus.reduce((acc, sku) => acc + (sku.current_stock || 0), 0)}
+              </div>
+            </div>
             {formData.skus.map((sku, idx) => (
               <div key={idx} style={{ padding: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '16px' }}>
-                <h5 style={{ marginTop: 0 }}>{sku.variant_name || 'Default Variant'} <span style={{ color: 'gray', fontWeight: 'normal' }}>({sku.sku_code})</span></h5>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <h5 style={{ margin: 0 }}>{sku.variant_name || 'Default Variant'} <span style={{ color: 'gray', fontWeight: 'normal' }}>({sku.sku_code})</span></h5>
+                  <span style={{ fontWeight: 'bold', color: sku.current_stock > 0 ? '#16a34a' : '#ef4444' }}>Current Stock: {sku.current_stock || 0}</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
                   <div className="form-group"><label>Safety Stock</label><input type="number" value={sku.safety_stock} onChange={e => {
                     const newSkus = [...formData.skus]; newSkus[idx].safety_stock = Number(e.target.value); setFormData({...formData, skus: newSkus});
                   }} /></div>
@@ -378,14 +399,15 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
                   <div className="form-group"><label>Maximum Stock</label><input type="number" value={sku.maximum_stock} onChange={e => {
                     const newSkus = [...formData.skus]; newSkus[idx].maximum_stock = Number(e.target.value); setFormData({...formData, skus: newSkus});
                   }} /></div>
+                  <div className="form-group"><label style={{color: '#b45309'}}>Add / Remove Stock</label><input type="number" value={sku.stock_adjustment || ''} onChange={e => {
+                    const newSkus = [...formData.skus]; newSkus[idx].stock_adjustment = e.target.value === '' ? '' : Number(e.target.value); setFormData({...formData, skus: newSkus});
+                  }} placeholder="0" /></div>
+                </div>
+                <div style={{ marginTop: '8px' }}>
+                  <small style={{ color: '#92400e' }}>Enter a positive or negative number to adjust current stock.</small>
                 </div>
               </div>
             ))}
-            <div className="form-group" style={{ marginTop: '24px', padding: '16px', background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '6px' }}>
-              <label style={{ color: '#b45309' }}>Opening Stock (All Variants)</label>
-              <input type="number" value={formData.openingStock} onChange={e => setFormData({...formData, openingStock: Number(e.target.value)})} />
-              <small style={{ color: '#92400e' }}>This generates an initial inventory transaction.</small>
-            </div>
           </div>
         )}
 
@@ -416,6 +438,45 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
 
         {currentStep === 7 && (
           <div>
+            <h4>Additional Information</h4>
+            <div className="form-group"><label>Key Features (One per line)</label><textarea rows="4" value={formData.metadata.key_features || ''} onChange={e => setFormData({...formData, metadata: {...formData.metadata, key_features: e.target.value}})} placeholder="E.g. Long battery life&#10;Water resistant" /></div>
+            <div className="form-group"><label>How to Use</label><textarea rows="3" value={formData.metadata.how_to_use || ''} onChange={e => setFormData({...formData, metadata: {...formData.metadata, how_to_use: e.target.value}})} /></div>
+            
+            <h5 style={{ marginTop: '24px' }}>Product Details Table</h5>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="form-group"><label>Marketed by</label><input value={formData.metadata.marketed_by || ''} onChange={e => setFormData({...formData, metadata: {...formData.metadata, marketed_by: e.target.value}})} /></div>
+              <div className="form-group"><label>Net Quantity</label><input value={formData.metadata.net_quantity || ''} onChange={e => setFormData({...formData, metadata: {...formData.metadata, net_quantity: e.target.value}})} /></div>
+              <div className="form-group"><label>Country of Origin</label><input value={formData.metadata.country_of_origin || ''} onChange={e => setFormData({...formData, metadata: {...formData.metadata, country_of_origin: e.target.value}})} /></div>
+              <div className="form-group"><label>Common/Generic Name</label><input value={formData.metadata.generic_name || ''} onChange={e => setFormData({...formData, metadata: {...formData.metadata, generic_name: e.target.value}})} /></div>
+            </div>
+            <div className="form-group"><label>Included Components</label><input value={formData.metadata.included_components || ''} onChange={e => setFormData({...formData, metadata: {...formData.metadata, included_components: e.target.value}})} /></div>
+            <div className="form-group"><label>Customer Care Details</label><input value={formData.metadata.customer_care_details || ''} onChange={e => setFormData({...formData, metadata: {...formData.metadata, customer_care_details: e.target.value}})} /></div>
+            <div className="form-group"><label>Manufacturer Details</label><textarea rows="2" value={formData.metadata.manufacturer_details || ''} onChange={e => setFormData({...formData, metadata: {...formData.metadata, manufacturer_details: e.target.value}})} /></div>
+
+            <h5 style={{ marginTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              Frequently Asked Questions
+              <button type="button" className="btn-secondary" style={{ fontSize: '12px', padding: '4px 12px' }} onClick={() => setFormData({...formData, metadata: {...formData.metadata, faqs: [...(formData.metadata.faqs || []), {q: '', a: ''}]}})}>+ Add FAQ</button>
+            </h5>
+            {(formData.metadata.faqs || []).map((faq, idx) => (
+              <div key={idx} style={{ display: 'flex', gap: '16px', marginBottom: '16px', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div style={{ flex: 1 }}>
+                  <div className="form-group" style={{ marginBottom: '12px' }}><label>Question</label><input value={faq.q} onChange={e => {
+                    const newFaqs = [...formData.metadata.faqs]; newFaqs[idx].q = e.target.value; setFormData({...formData, metadata: {...formData.metadata, faqs: newFaqs}});
+                  }} /></div>
+                  <div className="form-group" style={{ marginBottom: 0 }}><label>Answer</label><textarea rows="2" value={faq.a} onChange={e => {
+                    const newFaqs = [...formData.metadata.faqs]; newFaqs[idx].a = e.target.value; setFormData({...formData, metadata: {...formData.metadata, faqs: newFaqs}});
+                  }} /></div>
+                </div>
+                <button type="button" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', alignSelf: 'flex-start' }} onClick={() => {
+                  const newFaqs = [...formData.metadata.faqs]; newFaqs.splice(idx, 1); setFormData({...formData, metadata: {...formData.metadata, faqs: newFaqs}});
+                }}>Delete</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {currentStep === 8 && (
+          <div>
             <h4>Search Engine Optimization (SEO)</h4>
             <div className="form-group"><label>URL Slug</label><input value={formData.url_slug} onChange={e => setFormData({...formData, url_slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')})} placeholder="e.g. my-product-name" /></div>
             <div className="form-group"><label>Meta Title</label><input value={formData.meta_title} onChange={e => setFormData({...formData, meta_title: e.target.value})} maxLength={60} /></div>
@@ -424,7 +485,7 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
           </div>
         )}
 
-        {currentStep === 8 && (
+        {currentStep === 9 && (
           <div>
             <h4>Review & Publish</h4>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>

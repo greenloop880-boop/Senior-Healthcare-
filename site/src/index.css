@@ -1048,9 +1048,7 @@ h6 {
 
 /* HEALTH ASSESSMENT SECTION */
 .health-bg {
-  background-color: #FAF8F5;
-  border-top: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
+  background-color: #FFFFFF;
   padding-top: 10px !important;
 }
 
@@ -3693,7 +3691,7 @@ h6 {
 }
 
 .trust-title {
-  font-size: 32px;
+  font-size: 16px;
   color: var(--text-gray);
   font-weight: bold;
   margin-bottom: 8px;
@@ -3702,7 +3700,7 @@ h6 {
 }
 
 .trust-desc {
-  font-size: 32px;
+  font-size: 20px;
   font-weight: bold;
   color: var(--text-dark);
   line-height: 1.3;

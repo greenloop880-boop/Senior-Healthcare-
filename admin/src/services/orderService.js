@@ -49,6 +49,10 @@ export const orderService = {
         });
         if (error) throw error;
         if (data && data.error) throw new Error(data.error);
+        
+        // Restore inventory logic
+        await this._restoreInventoryForCancelledOrder(orderId);
+        
         return data;
       } catch (err) {
         console.warn("Edge function cancel failed, falling back to direct DB update.", err);
@@ -59,6 +63,10 @@ export const orderService = {
           .select()
           .single();
         if (error) throw error;
+        
+        // Restore inventory logic
+        await this._restoreInventoryForCancelledOrder(orderId);
+        
         return data;
       }
     } else if (newStatus === 'SHIPPED') {
@@ -140,5 +148,39 @@ export const orderService = {
       `);
     if (error) throw error;
     return data;
+  },
+
+  async _restoreInventoryForCancelledOrder(orderId) {
+    try {
+      // 1. Fetch order details to get fulfillment warehouse
+      const { data: order } = await supabase.from('orders').select('fulfillment_warehouse_id').eq('id', orderId).single();
+      
+      // 2. Fetch order items
+      const { data: items } = await supabase.from('order_items').select('sku_id, quantity, unit_cost').eq('order_id', orderId);
+      
+      if (order && items && items.length > 0) {
+        let warehouseId = order.fulfillment_warehouse_id;
+        
+        if (!warehouseId) {
+          const { data: defaultWh } = await supabase.from('warehouses').select('id').limit(1).single();
+          if (defaultWh) warehouseId = defaultWh.id;
+        }
+
+        if (warehouseId) {
+          const transactions = items.map(item => ({
+            sku_id: item.sku_id,
+            warehouse_id: warehouseId,
+            transaction_type: 'RESTOCK_CANCEL',
+            quantity_change: item.quantity,
+            unit_cost: item.unit_cost,
+            reference_type: 'ORDER',
+            reference_id: orderId
+          }));
+          await supabase.from('inventory_transactions').insert(transactions);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to restore inventory for cancelled order:", e);
+    }
   }
 };

@@ -28,7 +28,7 @@ export default function HomePage() {
   const { data: categoriesList = [], isLoading: isLoadingCats } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('categories').select('*').eq('is_active', true);
+      const { data, error } = await supabase.from('categories').select('*').is('deleted_at', null).eq('is_active', true);
       if (error) { console.error('Categories Error:', error); throw error; }
       return (data || []).map(c => ({ ...c, title: c.name }));
     }
@@ -71,7 +71,7 @@ export default function HomePage() {
     queryKey: ['homepageProducts'],
     queryFn: async () => {
       const { data, error } = await supabase.from('products')
-        .select('*, categories(name), skus(id, selling_price, mrp)')
+        .select('*, categories(name), skus(id, selling_price, mrp, inventory(quantity_available))')
         .eq('is_active', true)
         .limit(24);
       
@@ -80,11 +80,12 @@ export default function HomePage() {
       const processed = (data || []).map(p => {
         const price = p.skus && p.skus.length > 0 ? Number(p.skus[0].selling_price) : 0;
         const mrp = p.skus && p.skus.length > 0 ? Number(p.skus[0].mrp) : 0;
+        const totalStock = p.skus?.reduce((sum, sku) => sum + (sku.inventory?.reduce((invSum, inv) => invSum + (inv.quantity_available || 0), 0) || 0), 0) || 0;
         return {
           ...p,
           title: p.name,
           category_title: p.categories?.name || 'Other',
-          price, mrp,
+          price, mrp, totalStock,
           discount: (mrp > 0 && price < mrp) ? Math.round(((mrp - price) / mrp) * 100) + '% off' : ''
         };
       });
@@ -376,7 +377,7 @@ export default function HomePage() {
 
 
       {/* WHY INDIA TRUSTS Senior Anandam */}
-      <section className="section-container" id="trust-section" style={{ backgroundColor: '#F9F9F9', paddingTop: '48px', paddingBottom: '48px', marginTop: '20px', marginBottom: '30px' }}>
+      <section className="section-container" id="trust-section" style={{ backgroundColor: '#FFFFFF', paddingTop: '40px', paddingBottom: '10px', marginTop: '20px', marginBottom: '0px' }}>
         <div className="section-heading-wrapper" style={{ marginBottom: '40px', textAlign: 'center' }}>
           <h2 className="section-heading" style={{ color: 'var(--text-dark)', fontSize: '32px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>WHY INDIA TRUSTS Senior Anandam?</h2>
         </div>
@@ -421,7 +422,7 @@ export default function HomePage() {
       </section>
 
       {/* BEST SELLERS SECTION */}
-      <section className="section-container" id="products" style={{ paddingTop: '50px', paddingBottom: '30px' }}>
+      <section className="section-container" id="products" style={{ paddingTop: '20px', paddingBottom: '30px' }}>
         <div className="section-heading-wrapper">
           <h2 className="section-heading">BEST SELLERS</h2>
         </div>
@@ -499,14 +500,18 @@ export default function HomePage() {
                             <button
                               className="btn-secondary-sm"
                               onClick={() => addToCart(prod)}
+                              disabled={prod.totalStock <= 0}
+                              style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1, cursor: prod.totalStock <= 0 ? 'not-allowed' : 'pointer' }}
                             >
-                              Add to Cart
+                              {prod.totalStock <= 0 ? 'Out of Stock' : 'Add to Cart'}
                             </button>
                             <button
                               className="btn-primary-sm"
                               onClick={() => { addToCart(prod); setIsCartOpen(false); setIsCheckoutModalOpen(true); }}
+                              disabled={prod.totalStock <= 0}
+                              style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1, cursor: prod.totalStock <= 0 ? 'not-allowed' : 'pointer' }}
                             >
-                              Buy Now
+                              {prod.totalStock <= 0 ? 'Out of Stock' : 'Buy Now'}
                             </button>
                           </div>
                         </div>

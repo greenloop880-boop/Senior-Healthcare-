@@ -185,7 +185,7 @@ export default function ProductPage() {
         .select(`
           *,
           categories ( name ),
-          skus ( id, sku_code, variant_name, selling_price, mrp ),
+          skus ( id, sku_code, variant_name, selling_price, mrp, inventory(quantity_available) ),
           product_concerns ( concerns ( name ) )
         `)
         .eq('id', prodId)
@@ -229,6 +229,11 @@ export default function ProductPage() {
     });
   }
 
+  if (prod && prod.metadata && prod.metadata.key_features) {
+    const customSpecs = prod.metadata.key_features.split('\n').map(s => s.trim()).filter(Boolean);
+    normalSpecs.push(...customSpecs);
+  }
+
   const [qty, setQty] = useState(1);
   const [selectedSku, setSelectedSku] = useState(null);
   const [pincode, setPincode] = useState("");
@@ -244,6 +249,9 @@ export default function ProductPage() {
       setSelectedSku(null);
     }
   }, [prod, selectedSku]);
+
+  const currentStock = selectedSku?.inventory?.reduce((acc, inv) => acc + (inv.quantity_available || 0), 0) || 0;
+  const isOutOfStock = currentStock <= 0;
 
   if (isLoading) {
     return (
@@ -367,6 +375,8 @@ export default function ProductPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
                   {prod.skus.map((sku, i) => {
                     const isSelected = selectedSku && selectedSku.sku_code === sku.sku_code;
+                    const skuStock = sku.inventory?.reduce((acc, inv) => acc + (inv.quantity_available || 0), 0) || 0;
+                    const isSkuOutOfStock = skuStock <= 0;
                     return (
                       <div
                         key={i}
@@ -382,7 +392,8 @@ export default function ProductPage() {
                           backgroundColor: isSelected ? '#fffafa' : '#fff',
                           cursor: 'pointer',
                           transition: 'all 0.2s ease',
-                          boxShadow: isSelected ? '0 4px 12px rgba(220, 38, 38, 0.08)' : 'none'
+                          boxShadow: isSelected ? '0 4px 12px rgba(220, 38, 38, 0.08)' : 'none',
+                          opacity: isSkuOutOfStock ? 0.6 : 1
                         }}
                       >
                         <span style={{ 
@@ -398,7 +409,7 @@ export default function ProductPage() {
                           fontSize: '13px',
                           fontWeight: '500'
                         }}>
-                          ₹{sku.selling_price}
+                          ₹{sku.selling_price} {isSkuOutOfStock && <span style={{color: '#dc2626', fontSize: '11px', marginLeft: '4px'}}>(Out of Stock)</span>}
                         </span>
                       </div>
                     );
@@ -417,8 +428,8 @@ export default function ProductPage() {
           </div>
 
           <div className="action-buttons-large desktop-only">
-            <button className="btn-add-to-cart-large" onClick={handleAddToCart}>Add to Cart</button>
-            <button className="btn-buy-now-large" onClick={handleBuyNow}>Buy Now</button>
+            <button className="btn-add-to-cart-large" disabled={isOutOfStock} style={{ opacity: isOutOfStock ? 0.5 : 1, cursor: isOutOfStock ? 'not-allowed' : 'pointer' }} onClick={handleAddToCart}>{isOutOfStock ? 'Out of Stock' : 'Add to Cart'}</button>
+            <button className="btn-buy-now-large" disabled={isOutOfStock} style={{ opacity: isOutOfStock ? 0.5 : 1, cursor: isOutOfStock ? 'not-allowed' : 'pointer' }} onClick={handleBuyNow}>{isOutOfStock ? 'Out of Stock' : 'Buy Now'}</button>
           </div>
 
           <div className="mobile-delivery-block desktop-only">
@@ -431,8 +442,8 @@ export default function ProductPage() {
 
           {/* Mobile-Only Action Block directly after quantity */}
           <div className="mobile-buy-block mobile-only" style={{ marginTop: '20px', display: 'flex', gap: '8px' }}>
-            <button onClick={handleAddToCart} style={{ flex: 1, backgroundColor: 'transparent', color: 'var(--primary-red)', border: '1px solid var(--primary-red)', borderRadius: '30px', padding: '16px', fontSize: '16px', fontWeight: '700', cursor: 'pointer' }}>Add to Cart</button>
-            <button onClick={handleBuyNow} style={{ flex: 1, backgroundColor: 'var(--primary-red)', color: '#FFF', border: 'none', borderRadius: '30px', padding: '16px', fontSize: '16px', fontWeight: '700', cursor: 'pointer' }}>Buy Now</button>
+            <button disabled={isOutOfStock} onClick={handleAddToCart} style={{ flex: 1, backgroundColor: 'transparent', color: isOutOfStock ? '#94a3b8' : 'var(--primary-red)', border: `1px solid ${isOutOfStock ? '#94a3b8' : 'var(--primary-red)'}`, borderRadius: '30px', padding: '16px', fontSize: '16px', fontWeight: '700', cursor: isOutOfStock ? 'not-allowed' : 'pointer' }}>{isOutOfStock ? 'Out of Stock' : 'Add to Cart'}</button>
+            <button disabled={isOutOfStock} onClick={handleBuyNow} style={{ flex: 1, backgroundColor: isOutOfStock ? '#cbd5e1' : 'var(--primary-red)', color: '#FFF', border: 'none', borderRadius: '30px', padding: '16px', fontSize: '16px', fontWeight: '700', cursor: isOutOfStock ? 'not-allowed' : 'pointer' }}>{isOutOfStock ? 'Out of Stock' : 'Buy Now'}</button>
           </div>
 
           <div className="pincode-checker-section desktop-only">
@@ -510,7 +521,7 @@ export default function ProductPage() {
               <div className={`accordion-collapse ${openAccordion === "usage" ? 'open' : ''}`}>
                 <div className="accordion-collapse-inner">
                   <div className="accordion-content">
-                    <p>{catDetails ? catDetails.howToUseBody : 'Please consult the user manual included in the packaging for detailed instructions.'}</p>
+                    <p style={{ whiteSpace: 'pre-wrap' }}>{prod.metadata?.how_to_use || (catDetails ? catDetails.howToUseBody : 'Please consult the user manual included in the packaging for detailed instructions.')}</p>
                   </div>
                 </div>
               </div>
@@ -520,7 +531,7 @@ export default function ProductPage() {
       </div>
 
       {/* WHY INDIA TRUSTS Senior Anandam */}
-      <section id="trust-section" style={{ backgroundColor: '#F9F9F9', paddingTop: '48px', paddingBottom: '48px', marginTop: '40px', borderRadius: 'var(--radius-md)' }}>
+      <section id="trust-section" style={{ backgroundColor: '#FFFFFF', paddingTop: '48px', paddingBottom: '48px', marginTop: '40px', borderRadius: 'var(--radius-md)' }}>
         <div className="section-heading-wrapper" style={{ marginBottom: '40px', textAlign: 'center' }}>
           <h2 className="section-heading" style={{ color: 'var(--text-dark)', fontSize: '24px', textTransform: 'uppercase', letterSpacing: '1px' }}>WHY INDIA TRUSTS Senior Anandam?</h2>
         </div>
@@ -566,8 +577,9 @@ export default function ProductPage() {
 
       {/* Promotional Banners */}
       {(() => {
-        const detailBanners = (prod.detail_banners && prod.detail_banners.filter(url => url && url.trim() !== '').length > 0)
-          ? prod.detail_banners.filter(url => url && url.trim() !== '')
+        const dbBanners = prod.metadata?.detail_banners || [];
+        const detailBanners = (dbBanners.filter(url => url && url.trim() !== '').length > 0)
+          ? dbBanners.filter(url => url && url.trim() !== '')
           : [banner1, banner2, banner3, banner4];
         
         return detailBanners.length > 0 && (
@@ -647,12 +659,12 @@ export default function ProductPage() {
       <section className="faq-section">
         <h2 style={{ textAlign: 'center', fontSize: '32px', marginBottom: '40px', fontWeight: '700', color: 'var(--primary-red)' }}>FAQs</h2>
         <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', padding: '0 24px' }}>
-          {((prod.faqs && prod.faqs.length > 0) ? prod.faqs : [
+          {((prod.metadata?.faqs && prod.metadata.faqs.length > 0) ? prod.metadata.faqs : ((prod.faqs && prod.faqs.length > 0) ? prod.faqs : [
             { q: "My elderly parent lives alone. Will they actually be able to use this without help?", a: "Detailed answer will be available soon." },
             { q: "How is this different from cheaper massage devices I've seen at pharmacies for ₹300 - ₹500?", a: "Detailed answer will be available soon." },
             { q: "How long before I actually feel a difference?", a: "Detailed answer will be available soon." },
             { q: "The product page says 4 hours battery, but the FAQ says 3 hours - which is correct?", a: "Detailed answer will be available soon." }
-          ]).map((faq, idx, arr) => (
+          ])).map((faq, idx, arr) => (
             <div key={idx} style={{ borderBottom: idx === arr.length - 1 ? 'none' : '1px solid var(--primary-red)' }}>
               <div style={{
                 padding: '24px 0',
@@ -690,14 +702,14 @@ export default function ProductPage() {
         <h2 style={{ textAlign: 'center', fontSize: '32px', marginBottom: '40px', fontWeight: '700', color: 'var(--primary-red)' }}>Product Details</h2>
         <div className="product-details-table">
           {[
-            { label: 'Marketed by', value: prod.marketed_by || 'Senior Anandam Assisted Care Services Limited Plot No. 65, 2nd Floor, Landmark House,Sector- 44, Gurugram -122003, Haryana' },
-            { label: 'Net Quantity', value: prod.net_quantity || '1 Unit' },
-            { label: 'Country of Origin', value: prod.country_of_origin || 'China' },
-            { label: 'Included Components', value: prod.included_components || '1 Unit massage gun with 4 heads, 1 Unit type-C charging cable, 1 Unit warranty card, 1 Unit User Manual' },
-            { label: 'Customer Care Details', value: prod.customer_care_details || 'Contact No +91 9911789911 , Email ID- support@senioranandam.com , Address - Senior Anandam Assisted Care Services Limited Plot No. 65, 2nd Floor, Landmark House, Sector- 44, Gurugram -122003, Haryana' },
-            { label: 'Dimensions (if applicable)', value: prod.dimensions || '13.2*5*14.4 cm centimeters' },
-            { label: 'Common or Generic Name of Commodity', value: prod.generic_name || 'Massage Gun' },
-            { label: 'Name and Address of the Manufacturer', value: prod.manufacturer_details || 'ZHEJIANG LUYAO ELECTRONICS TECHNOLOGY CO., LTD, Wei 1st Road, Mechanical Park, Wanquan Light Industrial Base, Pingyang, Wenzhou, Zhejiang -325409, China' },
+            { label: 'Marketed by', value: prod.metadata?.marketed_by || prod.marketed_by || 'Senior Anandam Assisted Care Services Limited Plot No. 65, 2nd Floor, Landmark House,Sector- 44, Gurugram -122003, Haryana' },
+            { label: 'Net Quantity', value: prod.metadata?.net_quantity || prod.net_quantity || '1 Unit' },
+            { label: 'Country of Origin', value: prod.metadata?.country_of_origin || prod.country_of_origin || 'China' },
+            { label: 'Included Components', value: prod.metadata?.included_components || prod.included_components || '1 Unit massage gun with 4 heads, 1 Unit type-C charging cable, 1 Unit warranty card, 1 Unit User Manual' },
+            { label: 'Customer Care Details', value: prod.metadata?.customer_care_details || prod.customer_care_details || 'Contact No +91 9911789911 , Email ID- support@senioranandam.com , Address - Senior Anandam Assisted Care Services Limited Plot No. 65, 2nd Floor, Landmark House, Sector- 44, Gurugram -122003, Haryana' },
+            { label: 'Dimensions (if applicable)', value: prod.metadata?.dimensions || prod.dimensions || '13.2*5*14.4 cm centimeters' },
+            { label: 'Common or Generic Name of Commodity', value: prod.metadata?.generic_name || prod.generic_name || 'Massage Gun' },
+            { label: 'Name and Address of the Manufacturer', value: prod.metadata?.manufacturer_details || prod.manufacturer_details || 'ZHEJIANG LUYAO ELECTRONICS TECHNOLOGY CO., LTD, Wei 1st Road, Mechanical Park, Wanquan Light Industrial Base, Pingyang, Wenzhou, Zhejiang -325409, China' },
             { label: 'Maximum Retail Price (MRP) inclusive of taxes', value: `₹${prod.mrp || 1599}` }
           ].map((item, idx) => (
             <div key={idx} className="product-details-row">

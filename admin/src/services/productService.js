@@ -77,25 +77,26 @@ export const productService = {
           variant_name: sku.variant_name,
           selling_price: Number(sku.selling_price),
           mrp: Number(sku.mrp),
-          reorder_level: Number(sku.reorder_level)
+          reorder_level: Number(sku.reorder_level),
+          average_cost: Number(sku.purchase_cost)
         }])
         .select()
         .single();
       
       if (sError) throw sError;
 
-      // 5. Create Inventory Transaction for Opening Stock
-      if (openingStock > 0) {
+      // 5. Create Inventory Transaction for Stock Adjustment
+      if (sku.stock_adjustment && sku.stock_adjustment !== 0) {
         const { error: tError } = await supabase
           .from('inventory_transactions')
           .insert([{
             sku_id: newSku.id,
             warehouse_id: warehouseId,
             transaction_type: 'MANUAL_ADJUSTMENT',
-            quantity_change: openingStock,
-            unit_cost: sku.average_cost || 0, // Fallback if average cost isn't set
+            quantity_change: Number(sku.stock_adjustment),
+            unit_cost: Number(sku.purchase_cost) || 0,
             reference_type: 'MANUAL_ADJUSTMENT',
-            reference_id: 'OPENING_STOCK'
+            reference_id: 'WIZARD_ADJUSTMENT'
           }]);
         if (tError) throw tError;
       }
@@ -127,9 +128,13 @@ export const productService = {
       await supabase.from('product_concerns').insert(concernRows);
     }
 
-    // 3. Upsert SKUs
+    // 3. Upsert SKUs and handle Stock Adjustments
+    const warehouseId = await this.getDefaultWarehouse();
+    
     for (const sku of skus) {
-      if (sku.id) {
+      let currentSkuId = sku.id;
+      
+      if (currentSkuId) {
         // Update existing SKU
         const { error: sError } = await supabase
           .from('skus')
@@ -138,13 +143,14 @@ export const productService = {
             variant_name: sku.variant_name,
             selling_price: Number(sku.selling_price),
             mrp: Number(sku.mrp),
-            reorder_level: Number(sku.reorder_level)
+            reorder_level: Number(sku.reorder_level),
+            average_cost: Number(sku.purchase_cost)
           })
-          .eq('id', sku.id);
+          .eq('id', currentSkuId);
         if (sError) throw sError;
       } else {
         // Insert new SKU
-        const { error: sError } = await supabase
+        const { data: newSku, error: sError } = await supabase
           .from('skus')
           .insert([{
             product_id: id,
@@ -152,9 +158,28 @@ export const productService = {
             variant_name: sku.variant_name,
             selling_price: Number(sku.selling_price),
             mrp: Number(sku.mrp),
-            reorder_level: Number(sku.reorder_level)
-          }]);
+            reorder_level: Number(sku.reorder_level),
+            average_cost: Number(sku.purchase_cost)
+          }])
+          .select('id').single();
         if (sError) throw sError;
+        currentSkuId = newSku.id;
+      }
+      
+      // Handle Inventory Adjustment
+      if (sku.stock_adjustment && sku.stock_adjustment !== 0) {
+        const { error: tError } = await supabase
+          .from('inventory_transactions')
+          .insert([{
+            sku_id: currentSkuId,
+            warehouse_id: warehouseId,
+            transaction_type: 'MANUAL_ADJUSTMENT',
+            quantity_change: Number(sku.stock_adjustment),
+            unit_cost: Number(sku.purchase_cost) || 0,
+            reference_type: 'MANUAL_ADJUSTMENT',
+            reference_id: 'WIZARD_ADJUSTMENT'
+          }]);
+        if (tError) throw tError;
       }
     }
 
