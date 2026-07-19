@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 
-export default function DragDropImageUpload({ onFileSelect, required, label, recommendedSize, editing, existingImage }) {
+export default function DragDropImageUpload({ onFileSelect, onRemove, required, label, recommendedSize, editing, existingImage }) {
   const [isDragging, setIsDragging] = useState(false);
   const [preview, setPreview] = useState(existingImage || null);
   const [fileName, setFileName] = useState("");
@@ -75,6 +75,9 @@ export default function DragDropImageUpload({ onFileSelect, required, label, rec
     onFileSelect(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+    if (onRemove) {
+      onRemove();
     }
   };
 

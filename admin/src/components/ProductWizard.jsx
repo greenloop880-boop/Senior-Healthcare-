@@ -270,14 +270,25 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
           <div>
             <h4>Product Images & Media</h4>
             <p style={{ color: 'gray', fontSize: '14px', marginBottom: '16px' }}>Upload the main product image and gallery. (We preserve your existing upload logic here)</p>
-            <DragDropImageUpload onFileSelect={setImageFile} existingImage={formData.image_url} label="Primary Cover Image" recommendedSize="1000x1000 px" />
+            <DragDropImageUpload 
+              onFileSelect={setImageFile} 
+              onRemove={() => setFormData({ ...formData, image_url: '' })}
+              existingImage={formData.image_url} 
+              label="Primary Cover Image" 
+              recommendedSize="1000x1000 px" />
             <h5 style={{ marginTop: '24px' }}>Gallery Images</h5>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               {[0, 1, 2, 3].map(idx => (
                 <div key={idx} className="form-group" style={{ border: '1px solid #e2e8f0', padding: '10px', borderRadius: '6px', backgroundColor: '#f8fafc' }}>
                   <DragDropImageUpload onFileSelect={(file) => {
                     const newFiles = [...galleryFiles]; newFiles[idx] = file; setGalleryFiles(newFiles);
-                  }} existingImage={formData.images[idx]} label={`Gallery Image ${idx + 1}`} recommendedSize="1000x1000 px" />
+                  }} 
+                  onRemove={() => {
+                    const newImages = [...(formData.images || [])];
+                    newImages[idx] = '';
+                    setFormData({ ...formData, images: newImages });
+                  }}
+                  existingImage={formData.images[idx]} label={`Gallery Image ${idx + 1}`} recommendedSize="1000x1000 px" />
                 </div>
               ))}
             </div>
@@ -288,7 +299,13 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
                 <div key={idx} className="form-group" style={{ border: '1px solid #e2e8f0', padding: '10px', borderRadius: '6px', backgroundColor: '#f8fafc' }}>
                   <DragDropImageUpload onFileSelect={(file) => {
                     const newFiles = [...bannerFiles]; newFiles[idx] = file; setBannerFiles(newFiles);
-                  }} existingImage={formData.detail_banners && formData.detail_banners[idx]} label={`Feature Banner ${idx + 1}`} recommendedSize="1000x1000 px" />
+                  }} 
+                  onRemove={() => {
+                    const newBanners = [...(formData.detail_banners || ['', '', '', ''])];
+                    newBanners[idx] = '';
+                    setFormData({ ...formData, detail_banners: newBanners });
+                  }}
+                  existingImage={formData.detail_banners && formData.detail_banners[idx]} label={`Feature Banner ${idx + 1}`} recommendedSize="1000x1000 px" />
                 </div>
               ))}
             </div>
