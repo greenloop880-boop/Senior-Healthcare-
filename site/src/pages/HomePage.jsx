@@ -225,7 +225,7 @@ export default function HomePage() {
     <>
       {/* HERO SKELETON */}
       {isLoadingHero && (
-        <section className="hero-banner-section" style={{ background: '#e0e0e0', animation: 'pulse 1.5s infinite', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <section className="hero-banner-section" style={{ background: '#e0e0e0', animation: 'pulse 1.5s infinite', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
         </section>
       )}
 
