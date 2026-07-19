@@ -427,10 +427,22 @@ export default function ProductPage() {
             </div>
           </div>
 
-          <div className="action-buttons-large desktop-only">
-            <button className="btn-add-to-cart-large" disabled={isOutOfStock} style={{ opacity: isOutOfStock ? 0.5 : 1, cursor: isOutOfStock ? 'not-allowed' : 'pointer' }} onClick={handleAddToCart}>{isOutOfStock ? 'Out of Stock' : 'Add to Cart'}</button>
-            <button className="btn-buy-now-large" disabled={isOutOfStock} style={{ opacity: isOutOfStock ? 0.5 : 1, cursor: isOutOfStock ? 'not-allowed' : 'pointer' }} onClick={handleBuyNow}>{isOutOfStock ? 'Out of Stock' : 'Buy Now'}</button>
-          </div>
+          {isOutOfStock ? (
+            <div className="action-buttons-large desktop-only">
+              <button
+                className="btn-buy-now-large"
+                disabled
+                style={{ width: '100%', backgroundColor: '#f1f5f9', color: '#94a3b8', border: 'none', cursor: 'not-allowed', opacity: 1 }}
+              >
+                Out of Stock
+              </button>
+            </div>
+          ) : (
+            <div className="action-buttons-large desktop-only">
+              <button className="btn-add-to-cart-large" onClick={handleAddToCart}>Add to Cart</button>
+              <button className="btn-buy-now-large" onClick={handleBuyNow}>Buy Now</button>
+            </div>
+          )}
 
           <div className="mobile-delivery-block desktop-only">
             <span><span className="free-text">Free</span> Delivery by Jun 14 to 110001</span>
@@ -441,10 +453,21 @@ export default function ProductPage() {
           </div>
 
           {/* Mobile-Only Action Block directly after quantity */}
-          <div className="mobile-buy-block mobile-only" style={{ marginTop: '20px', display: 'flex', gap: '8px' }}>
-            <button disabled={isOutOfStock} onClick={handleAddToCart} style={{ flex: 1, backgroundColor: 'transparent', color: isOutOfStock ? '#94a3b8' : 'var(--primary-red)', border: `1px solid ${isOutOfStock ? '#94a3b8' : 'var(--primary-red)'}`, borderRadius: '30px', padding: '16px', fontSize: '16px', fontWeight: '700', cursor: isOutOfStock ? 'not-allowed' : 'pointer' }}>{isOutOfStock ? 'Out of Stock' : 'Add to Cart'}</button>
-            <button disabled={isOutOfStock} onClick={handleBuyNow} style={{ flex: 1, backgroundColor: isOutOfStock ? '#cbd5e1' : 'var(--primary-red)', color: '#FFF', border: 'none', borderRadius: '30px', padding: '16px', fontSize: '16px', fontWeight: '700', cursor: isOutOfStock ? 'not-allowed' : 'pointer' }}>{isOutOfStock ? 'Out of Stock' : 'Buy Now'}</button>
-          </div>
+          {isOutOfStock ? (
+            <div className="mobile-buy-block mobile-only" style={{ marginTop: '20px' }}>
+              <button
+                disabled
+                style={{ width: '100%', backgroundColor: '#f1f5f9', color: '#94a3b8', border: 'none', borderRadius: '30px', padding: '16px', fontSize: '16px', fontWeight: '700', cursor: 'not-allowed' }}
+              >
+                Out of Stock
+              </button>
+            </div>
+          ) : (
+            <div className="mobile-buy-block mobile-only" style={{ marginTop: '20px', display: 'flex', gap: '8px' }}>
+              <button onClick={handleAddToCart} style={{ flex: 1, backgroundColor: 'transparent', color: 'var(--primary-red)', border: '1px solid var(--primary-red)', borderRadius: '30px', padding: '16px', fontSize: '16px', fontWeight: '700', cursor: 'pointer' }}>Add to Cart</button>
+              <button onClick={handleBuyNow} style={{ flex: 1, backgroundColor: 'var(--primary-red)', color: '#FFF', border: 'none', borderRadius: '30px', padding: '16px', fontSize: '16px', fontWeight: '700', cursor: 'pointer' }}>Buy Now</button>
+            </div>
+          )}
 
           <div className="pincode-checker-section desktop-only">
             <h4>Check Delivery Location</h4>

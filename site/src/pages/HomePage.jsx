@@ -497,22 +497,30 @@ export default function HomePage() {
                             <span className="product-discount">{prod.discount}</span>
                           </div>
                           <div className="product-card-actions">
-                            <button
-                              className="btn-secondary-sm"
-                              onClick={() => addToCart(prod)}
-                              disabled={prod.totalStock <= 0}
-                              style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1, cursor: prod.totalStock <= 0 ? 'not-allowed' : 'pointer' }}
-                            >
-                              {prod.totalStock <= 0 ? 'Out of Stock' : 'Add to Cart'}
-                            </button>
-                            <button
-                              className="btn-primary-sm"
-                              onClick={() => { addToCart(prod); setIsCartOpen(false); setIsCheckoutModalOpen(true); }}
-                              disabled={prod.totalStock <= 0}
-                              style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1, cursor: prod.totalStock <= 0 ? 'not-allowed' : 'pointer' }}
-                            >
-                              {prod.totalStock <= 0 ? 'Out of Stock' : 'Buy Now'}
-                            </button>
+                            {prod.totalStock <= 0 ? (
+                              <button
+                                className="btn-out-of-stock"
+                                disabled
+                                style={{ gridColumn: 'span 2', backgroundColor: '#f1f5f9', color: '#94a3b8', border: 'none', borderRadius: '30px', padding: '10px', fontSize: '12px', fontWeight: '700', cursor: 'not-allowed', textAlign: 'center' }}
+                              >
+                                Out of Stock
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  className="btn-secondary-sm"
+                                  onClick={() => addToCart(prod)}
+                                >
+                                  Add to Cart
+                                </button>
+                                <button
+                                  className="btn-primary-sm"
+                                  onClick={() => { addToCart(prod); setIsCartOpen(false); setIsCheckoutModalOpen(true); }}
+                                >
+                                  Buy Now
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>

@@ -633,7 +633,7 @@ h6 {
 
 @media (max-width: 768px) {
   .hero-banner-section {
-    aspect-ratio: 800 / 1000;
+    aspect-ratio: 800 / 900;
   }
 }
 
@@ -1378,7 +1378,7 @@ h6 {
 .product-card-img-wrapper img {
   width: 100%;
   height: 100%;
-  object-fit: fill;
+  object-fit: cover;
   mix-blend-mode: multiply;
   transition: var(--transition-smooth);
 }
@@ -5139,6 +5139,20 @@ h6 {
     padding: 4px;
   }
 
+  .product-card-actions {
+    display: grid !important;
+    grid-template-columns: 1.15fr 1fr !important;
+    gap: 6px !important;
+  }
+
+  .product-card-actions button {
+    padding: 10px 4px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.2px !important;
+    white-space: nowrap !important;
+  }
+
   /* Hero Carousel */
   .hero-banner-section {
     /* height: 400px; */
@@ -5678,7 +5692,7 @@ h6 {
   }
 
   .product-card-content {
-    padding: 8px 8px 4px 8px !important;
+    padding: 12px 12px 12px 12px !important;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -5690,7 +5704,7 @@ h6 {
     -webkit-box-orient: vertical;
     overflow: hidden;
     font-size: 11px !important;
-    margin-bottom: 4px !important;
+    margin-bottom: 6px !important;
     color: var(--text-gray);
   }
 
@@ -5698,7 +5712,7 @@ h6 {
     font-size: 13px !important;
     font-weight: 600 !important;
     line-height: 1.3 !important;
-    margin-bottom: 4px !important;
+    margin-bottom: 6px !important;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -5758,8 +5772,8 @@ h6 {
 
   .product-card-price-row {
     flex-wrap: wrap;
-    gap: 4px;
-    margin-bottom: 0;
+    gap: 6px;
+    margin-bottom: 10px !important;
     padding-bottom: 0;
   }
 
@@ -5807,6 +5821,12 @@ h6 {
     background-color: #fff;
     color: var(--primary-red);
     border-left: 1px solid #eaeaea !important;
+  }
+
+  .btn-out-of-stock-mobile {
+    background-color: #f1f5f9 !important;
+    color: #94a3b8 !important;
+    cursor: not-allowed !important;
   }
 
   /* Bottom Actions Pill */
@@ -7800,4 +7820,6 @@ h6 {
     padding-left: 16px;
     padding-right: 16px;
   }
+}
+}
 }

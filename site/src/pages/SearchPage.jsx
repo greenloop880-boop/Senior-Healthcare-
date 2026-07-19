@@ -1,9 +1,11 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useAppContext } from '../context/AppContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '../config/supabaseClient';
 
 export default function SearchPage() {
   const {
-    navigateTo, addToCart, performSearch, setIsCheckoutModalOpen, setIsCartOpen, triggerBuyNow
+    navigateTo, addToCart, setIsCheckoutModalOpen, setIsCartOpen, triggerBuyNow
   } = useAppContext();
 
   // Read query from URL hash
@@ -12,13 +14,42 @@ export default function SearchPage() {
   const params = new URLSearchParams(queryString || "");
   const query = params.get('q') || "";
 
-  // Perform fuzzy search
-  const list = useMemo(() => {
-    return performSearch(query).map(p => {
-      const totalStock = p.skus?.reduce((sum, sku) => sum + (sku.inventory?.reduce((invSum, inv) => invSum + (inv.quantity_available || 0), 0) || 0), 0) || 0;
-      return { ...p, totalStock };
-    });
-  }, [query, performSearch]);
+  // Perform search query from Supabase
+  const { data: list = [], isLoading } = useQuery({
+    queryKey: ['searchProducts', query],
+    queryFn: async () => {
+      if (!query.trim()) return [];
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories ( name ),
+          skus ( id, sku_code, variant_name, selling_price, mrp, inventory(quantity_available) ),
+          product_concerns ( concerns ( name ) )
+        `)
+        .eq('is_active', true)
+        .ilike('name', `%${query.trim()}%`);
+
+      if (error) throw error;
+
+      return (data || []).map(p => {
+        const defaultSku = p.skus && p.skus.length > 0 ? p.skus[0] : null;
+        const totalStock = p.skus?.reduce((sum, sku) => sum + (sku.inventory?.reduce((invSum, inv) => invSum + (inv.quantity_available || 0), 0) || 0), 0) || 0;
+        return {
+          ...p,
+          title: p.name,
+          price: defaultSku ? Number(defaultSku.selling_price) : 0,
+          mrp: defaultSku ? Number(defaultSku.mrp) : 0,
+          totalStock,
+          image: p.image_url,
+          discount: (defaultSku && defaultSku.mrp > 0 && defaultSku.selling_price < defaultSku.mrp)
+            ? Math.round(((Number(defaultSku.mrp) - Number(defaultSku.selling_price)) / Number(defaultSku.mrp)) * 100) + '% off'
+            : ''
+        };
+      });
+    },
+    enabled: !!query.trim()
+  });
 
   return (
     <div className="section-container animate-fade" style={{ paddingTop: '20px', minHeight: '60vh' }}>
@@ -30,7 +61,11 @@ export default function SearchPage() {
       </div>
 
       <main className="catalog-main" style={{ width: '100%', maxWidth: '1200px', margin: '0 auto' }}>
-        {list.length > 0 ? (
+        {isLoading ? (
+          <div style={{ textAlign: 'center', padding: '64px' }}>
+            <h3>Searching products...</h3>
+          </div>
+        ) : list.length > 0 ? (
           <div className="products-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
             {list.map(prod => (
               <div key={prod.id} className="product-card">
@@ -59,27 +94,41 @@ export default function SearchPage() {
                     <span className="product-discount">{prod.discount}</span>
                   </div>
                   <div className="product-card-actions">
-                    <button
-                      className="btn-secondary-sm mobile-hide"
-                      onClick={() => addToCart(prod)}
-                      disabled={prod.totalStock <= 0}
-                      style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1, cursor: prod.totalStock <= 0 ? 'not-allowed' : 'pointer' }}
-                    >
-                      {prod.totalStock <= 0 ? 'Out of Stock' : 'Add to Cart'}
-                    </button>
-                    <button
-                      className="btn-primary-sm mobile-hide"
-                      onClick={() => triggerBuyNow(prod)}
-                      disabled={prod.totalStock <= 0}
-                      style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1, cursor: prod.totalStock <= 0 ? 'not-allowed' : 'pointer' }}
-                    >
-                      {prod.totalStock <= 0 ? 'Out of Stock' : 'Buy Now'}
-                    </button>
+                    {prod.totalStock <= 0 ? (
+                      <button
+                        className="btn-out-of-stock mobile-hide"
+                        disabled
+                        style={{ gridColumn: 'span 2', backgroundColor: '#f1f5f9', color: '#94a3b8', border: 'none', borderRadius: '30px', padding: '10px', fontSize: '12px', fontWeight: '700', cursor: 'not-allowed', textAlign: 'center' }}
+                      >
+                        Out of Stock
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          className="btn-secondary-sm mobile-hide"
+                          onClick={() => addToCart(prod)}
+                        >
+                          Add to Cart
+                        </button>
+                        <button
+                          className="btn-primary-sm mobile-hide"
+                          onClick={() => triggerBuyNow(prod)}
+                        >
+                          Buy Now
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="mobile-buttons-row desktop-hide">
-                  <button className="btn-buy-now-mobile" onClick={() => triggerBuyNow(prod)} disabled={prod.totalStock <= 0} style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1 }}>{prod.totalStock <= 0 ? 'Out of Stock' : 'Buy Now'}</button>
-                  <button className="btn-add-cart-mobile" onClick={() => addToCart(prod)} disabled={prod.totalStock <= 0} style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1 }}>{prod.totalStock <= 0 ? 'Out of Stock' : 'Add to Cart'}</button>
+                  {prod.totalStock <= 0 ? (
+                    <button className="btn-out-of-stock-mobile" disabled>Out of Stock</button>
+                  ) : (
+                    <>
+                      <button className="btn-buy-now-mobile" onClick={() => triggerBuyNow(prod)}>Buy Now</button>
+                      <button className="btn-add-cart-mobile" onClick={() => addToCart(prod)}>Add to Cart</button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}

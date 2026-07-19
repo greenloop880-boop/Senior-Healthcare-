@@ -437,41 +437,51 @@ export default function CollectionPage() {
                       <span className="product-discount">{prod.discount}</span>
                     </div>
                     <div className="product-card-actions">
-                      <button
-                        className="btn-secondary-sm mobile-hide"
-                        onClick={() => addToCart(prod)}
-                        disabled={prod.totalStock <= 0}
-                        style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1, cursor: prod.totalStock <= 0 ? 'not-allowed' : 'pointer' }}
-                      >
-                        {prod.totalStock <= 0 ? 'Out of Stock' : 'Add to Cart'}
-                      </button>
-                      <button
-                        className="btn-primary-sm mobile-hide"
-                        onClick={() => triggerBuyNow(prod)}
-                        disabled={prod.totalStock <= 0}
-                        style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1, cursor: prod.totalStock <= 0 ? 'not-allowed' : 'pointer' }}
-                      >
-                        {prod.totalStock <= 0 ? 'Out of Stock' : 'Buy Now'}
-                      </button>
+                      {prod.totalStock <= 0 ? (
+                        <button
+                          className="btn-out-of-stock mobile-hide"
+                          disabled
+                          style={{ gridColumn: 'span 2', backgroundColor: '#f1f5f9', color: '#94a3b8', border: 'none', borderRadius: '30px', padding: '10px', fontSize: '12px', fontWeight: '700', cursor: 'not-allowed', textAlign: 'center' }}
+                        >
+                          Out of Stock
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            className="btn-secondary-sm mobile-hide"
+                            onClick={() => addToCart(prod)}
+                          >
+                            Add to Cart
+                          </button>
+                          <button
+                            className="btn-primary-sm mobile-hide"
+                            onClick={() => triggerBuyNow(prod)}
+                          >
+                            Buy Now
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="mobile-buttons-row desktop-hide">
-                    <button
-                      className="btn-buy-now-mobile"
-                      onClick={() => triggerBuyNow(prod)}
-                      disabled={prod.totalStock <= 0}
-                      style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1, cursor: prod.totalStock <= 0 ? 'not-allowed' : 'pointer' }}
-                    >
-                      {prod.totalStock <= 0 ? 'Out of Stock' : 'Buy Now'}
-                    </button>
-                    <button
-                      className="btn-add-cart-mobile"
-                      onClick={() => addToCart(prod)}
-                      disabled={prod.totalStock <= 0}
-                      style={{ opacity: prod.totalStock <= 0 ? 0.5 : 1, cursor: prod.totalStock <= 0 ? 'not-allowed' : 'pointer' }}
-                    >
-                      {prod.totalStock <= 0 ? 'Out of Stock' : 'Add to Cart'}
-                    </button>
+                    {prod.totalStock <= 0 ? (
+                      <button className="btn-out-of-stock-mobile" disabled>Out of Stock</button>
+                    ) : (
+                      <>
+                        <button
+                          className="btn-buy-now-mobile"
+                          onClick={() => triggerBuyNow(prod)}
+                        >
+                          Buy Now
+                        </button>
+                        <button
+                          className="btn-add-cart-mobile"
+                          onClick={() => addToCart(prod)}
+                        >
+                          Add to Cart
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
