@@ -468,6 +468,7 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
             </div>
             <div className="form-group"><label>Included Components</label><input value={formData.metadata.included_components || ''} onChange={e => setFormData({...formData, metadata: {...formData.metadata, included_components: e.target.value}})} /></div>
             <div className="form-group"><label>Customer Care Details</label><input value={formData.metadata.customer_care_details || ''} onChange={e => setFormData({...formData, metadata: {...formData.metadata, customer_care_details: e.target.value}})} /></div>
+            <div className="form-group"><label>Dimensions (if applicable)</label><input value={formData.metadata.dimensions || ''} onChange={e => setFormData({...formData, metadata: {...formData.metadata, dimensions: e.target.value}})} placeholder="e.g. 13.2*5*14.4 cm" /></div>
             <div className="form-group"><label>Manufacturer Details</label><textarea rows="2" value={formData.metadata.manufacturer_details || ''} onChange={e => setFormData({...formData, metadata: {...formData.metadata, manufacturer_details: e.target.value}})} /></div>
 
             <h5 style={{ marginTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

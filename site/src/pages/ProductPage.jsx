@@ -656,39 +656,41 @@ export default function ProductPage() {
       </div>
 
       {/* FAQs Section */}
-      <section className="faq-section">
-        <h2 style={{ textAlign: 'center', fontSize: '32px', marginBottom: '40px', fontWeight: '700', color: 'var(--primary-red)' }}>FAQs</h2>
-        <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', padding: '0 24px' }}>
-          {((prod.metadata?.faqs && prod.metadata.faqs.length > 0) ? prod.metadata.faqs : ((prod.faqs && prod.faqs.length > 0) ? prod.faqs : [
-            { q: "My elderly parent lives alone. Will they actually be able to use this without help?", a: "Detailed answer will be available soon." },
-            { q: "How is this different from cheaper massage devices I've seen at pharmacies for ₹300 - ₹500?", a: "Detailed answer will be available soon." },
-            { q: "How long before I actually feel a difference?", a: "Detailed answer will be available soon." },
-            { q: "The product page says 4 hours battery, but the FAQ says 3 hours - which is correct?", a: "Detailed answer will be available soon." }
-          ])).map((faq, idx, arr) => (
-            <div key={idx} style={{ borderBottom: idx === arr.length - 1 ? 'none' : '1px solid var(--primary-red)' }}>
-              <div style={{
-                padding: '24px 0',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                cursor: 'pointer'
-              }} onClick={() => toggleAccordion(`faq-${idx}`)}>
-                <span style={{ fontSize: '15px', fontWeight: '400', color: 'var(--text-dark)' }}>{faq.q}</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary-red)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: openAccordion === `faq-${idx}` ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.3s ease' }}>
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              </div>
-              <div className={`accordion-collapse ${openAccordion === `faq-${idx}` ? 'open' : ''}`}>
-                <div className="accordion-collapse-inner" style={{ color: '#666', fontSize: '14px' }}>
-                  <div style={{ paddingBottom: '24px' }}>
-                    <p>{faq.a}</p>
+      {(() => {
+        const faqs = (prod.metadata?.faqs && prod.metadata.faqs.length > 0) ? prod.metadata.faqs : ((prod.faqs && prod.faqs.length > 0) ? prod.faqs : []);
+        if (faqs.length === 0) return null;
+        
+        return (
+          <section className="faq-section">
+            <h2 style={{ textAlign: 'center', fontSize: '32px', marginBottom: '40px', fontWeight: '700', color: 'var(--primary-red)' }}>FAQs</h2>
+            <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', padding: '0 24px' }}>
+              {faqs.map((faq, idx, arr) => (
+                <div key={idx} style={{ borderBottom: idx === arr.length - 1 ? 'none' : '1px solid var(--primary-red)' }}>
+                  <div style={{
+                    padding: '24px 0',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    cursor: 'pointer'
+                  }} onClick={() => toggleAccordion(`faq-${idx}`)}>
+                    <span style={{ fontSize: '15px', fontWeight: '400', color: 'var(--text-dark)' }}>{faq.q}</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary-red)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: openAccordion === `faq-${idx}` ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.3s ease' }}>
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </div>
+                  <div className={`accordion-collapse ${openAccordion === `faq-${idx}` ? 'open' : ''}`}>
+                    <div className="accordion-collapse-inner" style={{ color: '#666', fontSize: '14px' }}>
+                      <div style={{ paddingBottom: '24px' }}>
+                        <p>{faq.a}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
+          </section>
+        );
+      })()}
 
       {/* Product Details Section */}
       <section style={{
@@ -705,13 +707,13 @@ export default function ProductPage() {
             { label: 'Marketed by', value: prod.metadata?.marketed_by || prod.marketed_by || 'Senior Anandam Assisted Care Services Limited Plot No. 65, 2nd Floor, Landmark House,Sector- 44, Gurugram -122003, Haryana' },
             { label: 'Net Quantity', value: prod.metadata?.net_quantity || prod.net_quantity || '1 Unit' },
             { label: 'Country of Origin', value: prod.metadata?.country_of_origin || prod.country_of_origin || 'China' },
-            { label: 'Included Components', value: prod.metadata?.included_components || prod.included_components || '1 Unit massage gun with 4 heads, 1 Unit type-C charging cable, 1 Unit warranty card, 1 Unit User Manual' },
+            { label: 'Included Components', value: prod.metadata?.included_components || prod.included_components },
             { label: 'Customer Care Details', value: prod.metadata?.customer_care_details || prod.customer_care_details || 'Contact No +91 9911789911 , Email ID- support@senioranandam.com , Address - Senior Anandam Assisted Care Services Limited Plot No. 65, 2nd Floor, Landmark House, Sector- 44, Gurugram -122003, Haryana' },
-            { label: 'Dimensions (if applicable)', value: prod.metadata?.dimensions || prod.dimensions || '13.2*5*14.4 cm centimeters' },
-            { label: 'Common or Generic Name of Commodity', value: prod.metadata?.generic_name || prod.generic_name || 'Massage Gun' },
-            { label: 'Name and Address of the Manufacturer', value: prod.metadata?.manufacturer_details || prod.manufacturer_details || 'ZHEJIANG LUYAO ELECTRONICS TECHNOLOGY CO., LTD, Wei 1st Road, Mechanical Park, Wanquan Light Industrial Base, Pingyang, Wenzhou, Zhejiang -325409, China' },
-            { label: 'Maximum Retail Price (MRP) inclusive of taxes', value: `₹${prod.mrp || 1599}` }
-          ].map((item, idx) => (
+            { label: 'Dimensions (if applicable)', value: prod.metadata?.dimensions || prod.dimensions },
+            { label: 'Common or Generic Name of Commodity', value: prod.metadata?.generic_name || prod.generic_name },
+            { label: 'Name and Address of the Manufacturer', value: prod.metadata?.manufacturer_details || prod.manufacturer_details },
+            { label: 'Maximum Retail Price (MRP) inclusive of taxes', value: `₹${prod.mrp || 0}` }
+          ].filter(item => item.value).map((item, idx) => (
             <div key={idx} className="product-details-row">
               <div className="product-details-label">
                 {item.label}

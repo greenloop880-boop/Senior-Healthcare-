@@ -626,14 +626,14 @@ h6 {
   overflow: hidden;
   width: 100%;
   height: auto;
+  aspect-ratio: 1920 / 800;
   background-color: #FAF8F5;
   margin-top: -20px;
-  /* Moves the banner up slightly */
 }
 
 @media (max-width: 768px) {
   .hero-banner-section {
-    /* Remove aspect ratio */
+    aspect-ratio: 800 / 1000;
   }
 }
 
