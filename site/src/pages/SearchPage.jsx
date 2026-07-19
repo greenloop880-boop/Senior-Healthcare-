@@ -33,6 +33,7 @@ export default function SearchPage() {
         {list.length > 0 ? (
           <div className="products-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
             {list.map(prod => (
+              <div key={prod.id} className="product-card">
                 <div
                   className="product-card-img-wrapper"
                   onClick={() => navigateTo('product-detail', { productId: prod.id })}
