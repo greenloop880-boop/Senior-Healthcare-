@@ -186,6 +186,15 @@ export const productService = {
     return product;
   },
 
+  async deleteSku(skuId) {
+    const timestamp = new Date().toISOString();
+    const { error } = await supabase
+      .from('skus')
+      .update({ status: 'ARCHIVED', deleted_at: timestamp })
+      .eq('id', skuId);
+    if (error) throw error;
+  },
+
   async deleteProduct(id) {
     const timestamp = new Date().toISOString();
     const deletedSuffix = `-del-${Date.now()}`;

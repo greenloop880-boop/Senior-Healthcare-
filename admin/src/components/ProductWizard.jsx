@@ -15,6 +15,7 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
   const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [deletingSkuIds, setDeletingSkuIds] = useState(new Set());
 
   // Queries
   const { data: categories } = useQuery({ queryKey: ['categories'], queryFn: () => categoryService.getCategories() });
@@ -90,6 +91,28 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
 
   const handleNext = () => setCurrentStep(prev => Math.min(prev + 1, WIZARD_STEPS.length - 1));
   const handlePrev = () => setCurrentStep(prev => Math.max(prev - 1, 0));
+
+  const handleRemoveVariant = async (idx) => {
+    if (formData.skus.length <= 1) {
+      alert('A product must have at least one variant.');
+      return;
+    }
+    const sku = formData.skus[idx];
+    if (sku.id) {
+      // Existing DB record — confirm and soft-delete
+      if (!window.confirm(`Remove variant "${sku.variant_name || sku.sku_code}"? This cannot be undone.`)) return;
+      setDeletingSkuIds(prev => new Set(prev).add(sku.id));
+      try {
+        await productService.deleteSku(sku.id);
+      } catch (err) {
+        alert('Failed to delete variant: ' + err.message);
+        setDeletingSkuIds(prev => { const s = new Set(prev); s.delete(sku.id); return s; });
+        return;
+      }
+    }
+    const newSkus = formData.skus.filter((_, i) => i !== idx);
+    setFormData({ ...formData, skus: newSkus });
+  };
 
   const generateVariants = () => {
     // Attribute combination engine
@@ -342,7 +365,7 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
 
             <h5 style={{ marginTop: '32px', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>Generated SKUs</h5>
             {formData.skus.map((sku, idx) => (
-              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', gap: '12px', padding: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', marginBottom: '8px' }}>
+              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr auto', gap: '12px', padding: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', marginBottom: '8px', alignItems: 'center' }}>
                 <div><strong>SKU:</strong> <input value={sku.sku_code} onChange={e => {
                   const newSkus = [...formData.skus]; newSkus[idx].sku_code = e.target.value; setFormData({...formData, skus: newSkus});
                 }} style={{ width: '100%', padding: '4px' }} /></div>
@@ -352,6 +375,15 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
                 <div><strong>Barcode:</strong> <input value={sku.barcode} onChange={e => {
                   const newSkus = [...formData.skus]; newSkus[idx].barcode = e.target.value; setFormData({...formData, skus: newSkus});
                 }} style={{ width: '100%', padding: '4px' }} placeholder="UPC/EAN" /></div>
+                <button
+                  type="button"
+                  title="Remove this variant"
+                  disabled={deletingSkuIds.has(sku.id)}
+                  onClick={() => handleRemoveVariant(idx)}
+                  style={{ background: 'none', border: '1px solid #fca5a5', borderRadius: '6px', color: '#dc2626', cursor: 'pointer', padding: '6px 10px', fontSize: '16px', lineHeight: 1, opacity: deletingSkuIds.has(sku.id) ? 0.5 : 1 }}
+                >
+                  {deletingSkuIds.has(sku.id) ? '…' : '🗑️'}
+                </button>
               </div>
             ))}
           </div>
@@ -367,7 +399,10 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
               
               return (
                 <div key={idx} style={{ padding: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '16px' }}>
-                  <h5 style={{ marginTop: 0 }}>{sku.variant_name || 'Default Variant'} <span style={{ color: 'gray', fontWeight: 'normal' }}>({sku.sku_code})</span></h5>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <h5 style={{ margin: 0 }}>{sku.variant_name || 'Default Variant'} <span style={{ color: 'gray', fontWeight: 'normal' }}>({sku.sku_code})</span></h5>
+                    <button type="button" title="Remove this variant" disabled={deletingSkuIds.has(sku.id)} onClick={() => handleRemoveVariant(idx)} style={{ background: 'none', border: '1px solid #fca5a5', borderRadius: '6px', color: '#dc2626', cursor: 'pointer', padding: '4px 10px', fontSize: '14px', opacity: deletingSkuIds.has(sku.id) ? 0.5 : 1 }}>{deletingSkuIds.has(sku.id) ? 'Removing…' : '🗑️ Remove'}</button>
+                  </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
                     <div className="form-group"><label>MRP (₹)</label><input type="number" value={sku.mrp} onChange={e => {
                       const newSkus = [...formData.skus]; newSkus[idx].mrp = Number(e.target.value); setFormData({...formData, skus: newSkus});
@@ -403,7 +438,10 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
             {formData.skus.map((sku, idx) => (
               <div key={idx} style={{ padding: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <h5 style={{ margin: 0 }}>{sku.variant_name || 'Default Variant'} <span style={{ color: 'gray', fontWeight: 'normal' }}>({sku.sku_code})</span></h5>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <h5 style={{ margin: 0 }}>{sku.variant_name || 'Default Variant'} <span style={{ color: 'gray', fontWeight: 'normal' }}>({sku.sku_code})</span></h5>
+                    <button type="button" title="Remove this variant" disabled={deletingSkuIds.has(sku.id)} onClick={() => handleRemoveVariant(idx)} style={{ background: 'none', border: '1px solid #fca5a5', borderRadius: '6px', color: '#dc2626', cursor: 'pointer', padding: '4px 10px', fontSize: '13px', opacity: deletingSkuIds.has(sku.id) ? 0.5 : 1 }}>{deletingSkuIds.has(sku.id) ? 'Removing…' : '🗑️ Remove'}</button>
+                  </div>
                   <span style={{ fontWeight: 'bold', color: sku.current_stock > 0 ? '#16a34a' : '#ef4444' }}>Current Stock: {sku.current_stock || 0}</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
@@ -433,7 +471,10 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
             <h4>Shipping & Dimensions</h4>
             {formData.skus.map((sku, idx) => (
               <div key={idx} style={{ padding: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '16px' }}>
-                <h5 style={{ marginTop: 0 }}>{sku.variant_name || 'Default Variant'} <span style={{ color: 'gray', fontWeight: 'normal' }}>({sku.sku_code})</span></h5>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <h5 style={{ margin: 0 }}>{sku.variant_name || 'Default Variant'} <span style={{ color: 'gray', fontWeight: 'normal' }}>({sku.sku_code})</span></h5>
+                  <button type="button" title="Remove this variant" disabled={deletingSkuIds.has(sku.id)} onClick={() => handleRemoveVariant(idx)} style={{ background: 'none', border: '1px solid #fca5a5', borderRadius: '6px', color: '#dc2626', cursor: 'pointer', padding: '4px 10px', fontSize: '13px', opacity: deletingSkuIds.has(sku.id) ? 0.5 : 1 }}>{deletingSkuIds.has(sku.id) ? 'Removing…' : '🗑️ Remove'}</button>
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
                   <div className="form-group"><label>Weight (kg)</label><input type="number" step="0.01" value={sku.weight} onChange={e => {
                     const newSkus = [...formData.skus]; newSkus[idx].weight = e.target.value; setFormData({...formData, skus: newSkus});
