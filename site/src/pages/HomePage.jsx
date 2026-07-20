@@ -110,6 +110,8 @@ export default function HomePage() {
   const productsScrollRef = useRef(null);
   const [featuredVideoIndex, setFeaturedVideoIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [visualIndex, setVisualIndex] = useState(1);
+  const [isTransitioning, setIsTransitioning] = useState(true);
 
   const nextFeaturedVideo = () => {
     if (!communityVideos || communityVideos.length === 0) return;
@@ -127,12 +129,37 @@ export default function HomePage() {
     (banner) => banner && banner.image_url && banner.image_url.trim() !== ''
   );
 
-  const safeHeroIndex = activeBanners.length > 0 ? (heroIndex % activeBanners.length + activeBanners.length) % activeBanners.length : 0;
+  const length = activeBanners.length;
+  const extendedBanners = length > 1 
+    ? [activeBanners[length - 1], ...activeBanners, activeBanners[0]]
+    : activeBanners;
+
+  const realIndex = length > 1 
+    ? (visualIndex === 0 ? length - 1 : (visualIndex === length + 1 ? 0 : visualIndex - 1))
+    : 0;
+
+  useEffect(() => {
+    if (length <= 1) return;
+    if (visualIndex === length + 1) {
+      const timer = setTimeout(() => {
+        setIsTransitioning(false);
+        setVisualIndex(1);
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+    if (visualIndex === 0) {
+      const timer = setTimeout(() => {
+        setIsTransitioning(false);
+        setVisualIndex(length);
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [visualIndex, length]);
 
   // Sequential Banner Prefetching
   useEffect(() => {
     if (activeBanners.length > 1) {
-      const nextIndex = (safeHeroIndex + 1) % activeBanners.length;
+      const nextIndex = (realIndex + 1) % activeBanners.length;
       const nextBanner = activeBanners[nextIndex];
       if (nextBanner) {
         const isMobile = window.innerWidth <= 768;
@@ -143,7 +170,7 @@ export default function HomePage() {
         }
       }
     }
-  }, [safeHeroIndex, activeBanners]);
+  }, [realIndex, activeBanners]);
 
   const scrollReviewsSlider = (dir) => {
     if (reviewsScrollRef.current) {
@@ -184,13 +211,14 @@ export default function HomePage() {
       stopAutoplay();
     }
     return () => stopAutoplay();
-  }, [heroIndex, currentPage, activeBanners.length]);
+  }, [visualIndex, currentPage, length]);
 
   const startAutoplay = () => {
     stopAutoplay();
-    if (activeBanners.length <= 1) return;
+    if (length <= 1) return;
     carouselTimer.current = setInterval(() => {
-      setHeroIndex((prev) => (prev + 1) % activeBanners.length);
+      setIsTransitioning(true);
+      setVisualIndex((prev) => prev + 1);
     }, 5000);
   };
 
@@ -235,21 +263,27 @@ export default function HomePage() {
           <div className="hero-slider">
             <div 
               className="hero-slider-track" 
-              style={{ transform: `translateX(-${safeHeroIndex * 100}%)` }}
+              style={{ 
+                transform: `translateX(-${(length > 1 ? visualIndex : 0) * 100}%)`,
+                transition: isTransitioning ? 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)' : 'none'
+              }}
             >
-              {activeBanners.map((banner, idx) => (
-                <div
-                  key={banner.id}
-                  className={`hero-slide ${idx === safeHeroIndex ? 'active' : ''}`}
-                  onClick={() => navigateTo('collection')}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <picture>
-                    <source media="(max-width: 768px)" srcSet={banner.mobile_image_url} />
-                    <img src={banner.image_url} alt="Senior Anandam Banner" className="hero-bg-img" loading={idx === 0 ? "eager" : "lazy"} />
-                  </picture>
-                </div>
-              ))}
+              {extendedBanners.map((banner, idx) => {
+                const isRealActive = length > 1 ? (idx === visualIndex) : (idx === 0);
+                return (
+                  <div
+                    key={`${banner.id}-${idx}`}
+                    className={`hero-slide ${isRealActive ? 'active' : ''}`}
+                    onClick={() => navigateTo('collection')}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <picture>
+                      <source media="(max-width: 768px)" srcSet={banner.mobile_image_url} />
+                      <img src={banner.image_url} alt="Senior Anandam Banner" className="hero-bg-img" loading={isRealActive ? "eager" : "lazy"} />
+                    </picture>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -257,14 +291,20 @@ export default function HomePage() {
             <>
               <button
                 className="carousel-btn prev"
-                onClick={() => setHeroIndex((prev) => (prev - 1 + activeBanners.length) % activeBanners.length)}
+                onClick={() => {
+                  setIsTransitioning(true);
+                  setVisualIndex((prev) => prev - 1);
+                }}
                 aria-label="Previous Slide"
               >
                 <ArrowIcon direction="left" />
               </button>
               <button
                 className="carousel-btn next"
-                onClick={() => setHeroIndex((prev) => (prev + 1) % activeBanners.length)}
+                onClick={() => {
+                  setIsTransitioning(true);
+                  setVisualIndex((prev) => prev + 1);
+                }}
                 aria-label="Next Slide"
               >
                 <ArrowIcon direction="right" />
@@ -274,8 +314,11 @@ export default function HomePage() {
                 {activeBanners.map((_, idx) => (
                   <button
                     key={idx}
-                    className={`bullet ${idx === safeHeroIndex ? 'active' : ''}`}
-                    onClick={() => setHeroIndex(idx)}
+                    className={`bullet ${idx === realIndex ? 'active' : ''}`}
+                    onClick={() => {
+                      setIsTransitioning(true);
+                      setVisualIndex(idx + 1);
+                    }}
                     aria-label={`Go to slide ${idx + 1}`}
                   />
                 ))}
