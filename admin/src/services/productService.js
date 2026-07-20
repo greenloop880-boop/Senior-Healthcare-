@@ -10,7 +10,7 @@ export const productService = {
         categories ( id, name ),
         product_concerns ( concern_id ),
         skus (
-          id, sku_code, variant_name, selling_price, mrp, average_cost, reorder_level,
+          id, sku_code, variant_name, selling_price, mrp, average_cost, reorder_level, gst_percent, deleted_at, status,
           inventory ( quantity_available, quantity_reserved )
         )
       `)
@@ -18,7 +18,12 @@ export const productService = {
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data;
+
+    // Strip out archived/deleted SKUs so they don't reappear in the editor
+    return data.map(product => ({
+      ...product,
+      skus: (product.skus || []).filter(s => !s.deleted_at && s.status !== 'ARCHIVED')
+    }));
   },
 
   async getConcerns() {

@@ -63,9 +63,23 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
           skus: p.skus?.length > 0 ? p.skus.map(s => {
             const currentStock = s.inventory ? s.inventory.reduce((acc, inv) => acc + (inv.quantity_available || 0), 0) : 0;
             return {
-              id: s.id, sku_code: s.sku_code || '', variant_name: s.variant_name || '',
-              mrp: s.mrp || 0, selling_price: s.selling_price || 0, purchase_cost: s.average_cost || 0,
-              reorder_level: s.reorder_level || 10, stock_adjustment: 0, current_stock: currentStock
+              id: s.id,
+              sku_code: s.sku_code || '',
+              variant_name: s.variant_name || '',
+              mrp: s.mrp || 0,
+              selling_price: s.selling_price || 0,
+              purchase_cost: s.average_cost || 0,
+              gst_percent: s.gst_percent ?? 18,
+              reorder_level: s.reorder_level || 10,
+              maximum_stock: s.maximum_stock || 100,
+              safety_stock: s.safety_stock || 5,
+              barcode: s.barcode || '',
+              weight: s.weight || '',
+              length: s.length || '',
+              width: s.width || '',
+              height: s.height || '',
+              stock_adjustment: 0,
+              current_stock: currentStock
             };
           }) : [{ sku_code: '', variant_name: '', mrp: 0, selling_price: 0, purchase_cost: 0, gst_percent: 18, reorder_level: 10, maximum_stock: 100, safety_stock: 5, stock_adjustment: 0, current_stock: 0, barcode: '', weight: '', length: '', width: '', height: '' }],
           openingStock: 0,
