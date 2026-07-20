@@ -48,7 +48,7 @@ body {
   background-color: #FAFAFA;
   color: var(--text-dark);
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  overflow-x: clip;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -640,27 +640,23 @@ h6 {
 .hero-slider {
   width: 100%;
   height: 100%;
-  display: grid;
+  overflow: hidden;
+  position: relative;
+}
+
+.hero-slider-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+  will-change: transform;
 }
 
 .hero-slide {
-  grid-area: 1 / 1;
+  flex: 0 0 100%;
   width: 100%;
   height: 100%;
-  position: absolute;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.8s ease-in-out, visibility 0.8s ease-in-out;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hero-slide.active {
   position: relative;
-  opacity: 1;
-  visibility: visible;
-  z-index: 1;
 }
 
 .hero-bg-img {
@@ -2542,6 +2538,7 @@ h6 {
   overflow-y: auto;
   position: sticky;
   top: 100px;
+  align-self: start;
 }
 
 .filter-section {
@@ -5180,8 +5177,15 @@ h6 {
 
   /* Grids */
   .concern-grid {
-    grid-template-columns: 1fr 1fr;
+    display: grid !important;
+    grid-template-columns: none !important;
+    grid-template-rows: repeat(2, 130px);
+    grid-auto-flow: column;
+    grid-auto-columns: 130px;
+    overflow-x: auto;
     gap: 16px;
+    padding-bottom: 16px;
+    scroll-snap-type: x mandatory;
   }
 
   .concern-card {
@@ -5189,10 +5193,14 @@ h6 {
     border: none !important;
     box-shadow: none !important;
     padding: 0 !important;
+    scroll-snap-align: start;
+    height: 100%;
+    width: 100%;
   }
 
   .concern-image-wrapper {
-    height: 160px;
+    flex: 1;
+    height: auto;
     border-radius: 16px !important;
     overflow: hidden;
   }
@@ -5212,9 +5220,9 @@ h6 {
   .category-grid {
     display: grid !important;
     grid-template-columns: none !important;
-    grid-template-rows: repeat(2, calc(50vw - 24px));
+    grid-template-rows: repeat(2, 130px);
     grid-auto-flow: column;
-    grid-auto-columns: calc(50vw - 24px);
+    grid-auto-columns: 130px;
     overflow-x: auto;
     gap: 16px;
     padding-bottom: 16px;
@@ -7820,6 +7828,4 @@ h6 {
     padding-left: 16px;
     padding-right: 16px;
   }
-}
-}
 }

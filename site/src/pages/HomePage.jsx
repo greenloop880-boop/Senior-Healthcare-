@@ -233,19 +233,24 @@ export default function HomePage() {
       {activeBanners.length > 0 && (
         <section className="hero-banner-section" onMouseEnter={stopAutoplay} onMouseLeave={startAutoplay}>
           <div className="hero-slider">
-            {activeBanners.map((banner, idx) => (
-              <div
-                key={banner.id}
-                className={`hero-slide ${idx === safeHeroIndex ? 'active' : ''}`}
-                onClick={() => navigateTo('collection')}
-                style={{ cursor: 'pointer' }}
-              >
-                <picture>
-                  <source media="(max-width: 768px)" srcSet={banner.mobile_image_url} />
-                  <img src={banner.image_url} alt="Senior Anandam Banner" className="hero-bg-img" loading={idx === 0 ? "eager" : "lazy"} />
-                </picture>
-              </div>
-            ))}
+            <div 
+              className="hero-slider-track" 
+              style={{ transform: `translateX(-${safeHeroIndex * 100}%)` }}
+            >
+              {activeBanners.map((banner, idx) => (
+                <div
+                  key={banner.id}
+                  className={`hero-slide ${idx === safeHeroIndex ? 'active' : ''}`}
+                  onClick={() => navigateTo('collection')}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <picture>
+                    <source media="(max-width: 768px)" srcSet={banner.mobile_image_url} />
+                    <img src={banner.image_url} alt="Senior Anandam Banner" className="hero-bg-img" loading={idx === 0 ? "eager" : "lazy"} />
+                  </picture>
+                </div>
+              ))}
+            </div>
           </div>
 
           {activeBanners.length > 1 && (
