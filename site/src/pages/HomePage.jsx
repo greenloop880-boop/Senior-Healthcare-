@@ -217,9 +217,7 @@ export default function HomePage() {
     stopAutoplay();
     if (length <= 1) return;
     carouselTimer.current = setInterval(() => {
-      setIsTransitioning(true);
-      setVisualIndex((prev) => prev + 1);
-    }, 5000);
+      setHeroIndex((prev) => prev + 1);    }, 5000);
   };
 
   const stopAutoplay = () => {
@@ -249,6 +247,29 @@ export default function HomePage() {
     setActiveQuizId(quizId);
   };
 
+  const isSliderAnimating = useRef(false);
+
+  const handleHeroNext = () => {
+    if (isSliderAnimating.current) return;
+    isSliderAnimating.current = true;
+    setHeroIndex((prev) => prev + 1);
+    setTimeout(() => { isSliderAnimating.current = false; }, 800);
+  };
+
+  const handleHeroPrev = () => {
+    if (isSliderAnimating.current) return;
+    isSliderAnimating.current = true;
+    setHeroIndex((prev) => prev - 1);
+    setTimeout(() => { isSliderAnimating.current = false; }, 800);
+  };
+
+  const handleHeroBullet = (idx, currentSafeIndex) => {
+    if (isSliderAnimating.current) return;
+    isSliderAnimating.current = true;
+    setHeroIndex((prev) => prev + (idx - currentSafeIndex));
+    setTimeout(() => { isSliderAnimating.current = false; }, 800);
+  };
+
   return (
     <>
       {/* HERO SKELETON */}
@@ -258,54 +279,53 @@ export default function HomePage() {
       )}
 
       {/* HERO CAROUSEL */}
-      {activeBanners.length > 0 && (
-        <section className="hero-banner-section" onMouseEnter={stopAutoplay} onMouseLeave={startAutoplay}>
-          <div className="hero-slider">
-            <div 
-              className="hero-slider-track" 
-              style={{ 
-                transform: `translateX(-${(length > 1 ? visualIndex : 0) * 100}%)`,
-                transition: isTransitioning ? 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)' : 'none'
-              }}
-            >
-              {extendedBanners.map((banner, idx) => {
-                const isRealActive = length > 1 ? (idx === visualIndex) : (idx === 0);
+      {activeBanners.length > 0 && (() => {
+        // Ensure we have at least 7 banners to act as a safe buffer for the CSS shifting math.
+        // This prevents white gaps when the user clicks the arrows very rapidly.
+        let displayBanners = [...activeBanners];
+        while (displayBanners.length > 0 && displayBanners.length < 7) {
+          displayBanners = [...displayBanners, ...activeBanners];
+        }
+        
+        return (
+          <section className="hero-banner-section" onMouseEnter={stopAutoplay} onMouseLeave={startAutoplay}>
+            <div className="hero-slider" style={{ transform: `translateX(-${heroIndex * 100}%)` }}>
+              {displayBanners.map((banner, idx) => {
+                const len = displayBanners.length;
+                const shiftTimes = len > 1 ? Math.floor((heroIndex - idx + Math.floor(len / 2)) / len) : 0;
                 return (
                   <div
                     key={`${banner.id}-${idx}`}
-                    className={`hero-slide ${isRealActive ? 'active' : ''}`}
+                    className={`hero-slide ${(idx % activeBanners.length) === safeHeroIndex ? 'active' : ''}`}
                     onClick={() => navigateTo('collection')}
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: 'pointer', left: `${shiftTimes * len * 100}%` }}
                   >
                     <picture>
                       <source media="(max-width: 768px)" srcSet={banner.mobile_image_url} />
-                      <img src={banner.image_url} alt="Senior Anandam Banner" className="hero-bg-img" loading={isRealActive ? "eager" : "lazy"} />
-                    </picture>
+                      <img src={banner.image_url} alt="Senior Anandam Banner" className="hero-bg-img" loading={idx === 0 ? "eager" : "lazy"} />                    </picture>
                   </div>
                 );
               })}
             </div>
-          </div>
+>>>>>>> 2506c43 (Fix hero slider white screen bug and mobile category sidebar sticky behavior)
 
-          {activeBanners.length > 1 && (
+            {activeBanners.length > 1 && (
             <>
               <button
                 className="carousel-btn prev"
+<<<<<<< HEAD
                 onClick={() => {
                   setIsTransitioning(true);
                   setVisualIndex((prev) => prev - 1);
                 }}
-                aria-label="Previous Slide"
+=======
+                onClick={handleHeroPrev}                aria-label="Previous Slide"
               >
                 <ArrowIcon direction="left" />
               </button>
               <button
                 className="carousel-btn next"
-                onClick={() => {
-                  setIsTransitioning(true);
-                  setVisualIndex((prev) => prev + 1);
-                }}
-                aria-label="Next Slide"
+                onClick={handleHeroNext}                aria-label="Next Slide"
               >
                 <ArrowIcon direction="right" />
               </button>
@@ -314,19 +334,16 @@ export default function HomePage() {
                 {activeBanners.map((_, idx) => (
                   <button
                     key={idx}
-                    className={`bullet ${idx === realIndex ? 'active' : ''}`}
-                    onClick={() => {
-                      setIsTransitioning(true);
-                      setVisualIndex(idx + 1);
-                    }}
-                    aria-label={`Go to slide ${idx + 1}`}
+                    className={`bullet ${idx === safeHeroIndex ? 'active' : ''}`}
+                    onClick={() => handleHeroBullet(idx, safeHeroIndex)}                    aria-label={`Go to slide ${idx + 1}`}
                   />
                 ))}
               </div>
             </>
           )}
-        </section>
-      )}
+          </section>
+        );
+      })()}
 
       {/* SENIOR FIRST BANNER */}
       <div className="senior-first-banner">

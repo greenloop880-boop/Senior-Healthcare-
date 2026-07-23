@@ -38,7 +38,7 @@ html {
   /* Firefox */
   -ms-overflow-style: none;
   /* IE and Edge */
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {
@@ -639,24 +639,21 @@ h6 {
 
 .hero-slider {
   width: 100%;
-  height: 100%;
-  overflow: hidden;
-  position: relative;
-}
-
-.hero-slider-track {
   display: flex;
-  width: 100%;
-  height: 100%;
-  will-change: transform;
+  transition: transform 0.8s ease-in-out;
 }
 
 .hero-slide {
-  flex: 0 0 100%;
   width: 100%;
-  height: 100%;
+  flex: 0 0 100%;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
+.hero-slide.active {
+  z-index: 1;}
 
 .hero-bg-img {
   width: 100%;
@@ -5128,8 +5125,7 @@ h6 {
   }
 
   .header-actions {
-    gap: 8px;
-  }
+    gap: 8px;  }
 
   .icon-btn {
     padding: 5px;
@@ -5180,8 +5176,7 @@ h6 {
     grid-template-columns: none !important;
     grid-template-rows: repeat(2, 180px);
     grid-auto-flow: column;
-    grid-auto-columns: 130px;
-    overflow-x: auto;
+    grid-auto-columns: 130px;    overflow-x: auto;
     gap: 16px;
     padding-bottom: 16px;
     scroll-snap-type: x mandatory;
@@ -5200,13 +5195,18 @@ h6 {
   .concern-image-wrapper {
     flex: none;
     width: 130px;
-    height: 130px;
-    border-radius: 16px !important;
+    height: 130px;    border-radius: 16px !important;
     overflow: hidden;
   }
 
+  .concern-image-wrapper img {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+  }
+
   .concern-title-box {
-    padding: 12px 0 0 0 !important;
+    padding: 8px 0 0 0 !important;
     background: transparent !important;
     border: none !important;
   }
@@ -5606,6 +5606,7 @@ h6 {
     align-items: center;
     position: sticky;
     top: 115px;
+    align-self: start;
     /* Offset for header */
     height: calc(100vh - 175px);
     overflow-y: auto;
