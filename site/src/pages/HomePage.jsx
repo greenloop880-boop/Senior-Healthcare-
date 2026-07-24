@@ -388,7 +388,7 @@ export default function HomePage() {
       </section>
 
       {/* SHOP BY CATEGORY */}
-      <section className="section-container" id="categories" style={{ paddingTop: '40px', paddingBottom: '40px' }}>
+      <section className="section-container" id="categories">
         <div className="section-heading-wrapper">
           <span className="section-tag">Browse All Items</span>
           <h2 className="section-heading">SHOP BY CATEGORY</h2>
@@ -424,7 +424,7 @@ export default function HomePage() {
       </section>
 
       {/* QUICK HEALTH REVIEW */}
-      <section className="section-container health-bg" id="health-reviews" style={{ paddingLeft: '135px', paddingRight: '135px', paddingBottom: '40px' }}>
+      <section className="section-container health-bg" id="health-reviews">
         <div className="section-heading-wrapper" style={{ paddingBottom: '25px' }}>
           <h2 className="section-heading">LET'S DO A QUICK HEALTH REVIEW</h2>
         </div>
@@ -452,7 +452,7 @@ export default function HomePage() {
 
 
       {/* WHY INDIA TRUSTS Senior Anandam */}
-      <section className="section-container" id="trust-section" style={{ backgroundColor: '#FFFFFF', paddingTop: '40px', paddingBottom: '10px', marginTop: '20px', marginBottom: '0px' }}>
+      <section className="section-container" id="trust-section">
         <div className="section-heading-wrapper" style={{ marginBottom: '40px', textAlign: 'center' }}>
           <h2 className="section-heading" style={{ color: 'var(--text-dark)', fontSize: '32px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>WHY INDIA TRUSTS Senior Anandam?</h2>
         </div>
@@ -497,7 +497,7 @@ export default function HomePage() {
       </section>
 
       {/* BEST SELLERS SECTION */}
-      <section className="section-container" id="products" style={{ paddingTop: '20px', paddingBottom: '30px' }}>
+      <section className="section-container" id="products">
         <div className="section-heading-wrapper">
           <h2 className="section-heading">BEST SELLERS</h2>
         </div>
@@ -687,7 +687,7 @@ export default function HomePage() {
       </section>
 
       {/* CUSTOMER REVIEW (Premium senior portrait slider) */}
-      <section className="section-container padded-section" id="reviews" style={{ paddingTop: '20px' }}>
+      <section className="section-container padded-section" id="reviews">
         <div className="section-heading-wrapper" style={{ marginBottom: '24px' }}>
           <h2 className="section-heading">CUSTOMER REVIEW</h2>
         </div>

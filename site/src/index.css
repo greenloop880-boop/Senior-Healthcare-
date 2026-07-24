@@ -868,6 +868,34 @@ h6 {
   padding: 0 24px 0px 24px;
 }
 
+#categories.section-container {
+  padding-top: 40px;
+  padding-bottom: 40px;
+}
+
+#health-reviews.section-container {
+  padding-left: 135px;
+  padding-right: 135px;
+  padding-bottom: 40px;
+}
+
+#trust-section.section-container {
+  background-color: #FFFFFF;
+  padding-top: 40px;
+  padding-bottom: 10px;
+  margin-top: 20px;
+  margin-bottom: 0px;
+}
+
+#products.section-container {
+  padding-top: 20px;
+  padding-bottom: 30px;
+}
+
+#reviews.section-container {
+  padding-top: 20px;
+}
+
 .section-heading-wrapper {
   text-align: center;
   margin-bottom: 10px;
@@ -970,7 +998,7 @@ h6 {
 .category-scroll-container {
   overflow-x: auto;
   padding-bottom: 10px;
-  margin: 0 -10px;
+  margin: 0;
 }
 
 .category-grid {
@@ -5099,7 +5127,7 @@ h6 {
   }
 
   .section-container {
-    padding: 0 16px 30px 16px !important;
+    padding: 0px 24px 30px !important;
     width: 100%;
   }
 
