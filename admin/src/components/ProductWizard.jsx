@@ -149,11 +149,20 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
       const prefix = selectedBrand ? selectedBrand.brand_code : 'SA';
       const baseCode = formData.internal_code || `${prefix}-${Date.now().toString(36).toUpperCase()}`;
       
-      const newSkus = combinations.map((combo, idx) => ({
-        ...formData.skus[0],
-        variant_name: combo,
-        sku_code: `${baseCode}-${String(idx+1).padStart(2, '0')}`
-      }));
+      const newSkus = combinations.map((combo, idx) => {
+        // Strip the ID from the base SKU template so we don't duplicate it
+        const { id, ...baseSku } = formData.skus[0] || {};
+        // Attempt to keep the existing ID if it was at the same index
+        const existingSku = formData.skus[idx];
+        const skuIdToKeep = existingSku ? existingSku.id : undefined;
+
+        return {
+          ...baseSku,
+          ...(skuIdToKeep ? { id: skuIdToKeep } : {}),
+          variant_name: combo,
+          sku_code: existingSku?.sku_code || `${baseCode}-${String(idx+1).padStart(2, '0')}`
+        };
+      });
       setFormData({ ...formData, skus: newSkus });
     }
   };
@@ -377,7 +386,7 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
               </div>
             ))}
 
-            <h5 style={{ marginTop: '32px', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>Generated SKUs</h5>
+            <h5 style={{ marginTop: '32px', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>Variants / SKUs</h5>
             {formData.skus.map((sku, idx) => (
               <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr auto', gap: '12px', padding: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', marginBottom: '8px', alignItems: 'center' }}>
                 <div><strong>SKU:</strong> <input value={sku.sku_code} onChange={e => {
@@ -400,6 +409,20 @@ export default function ProductWizard({ onCancel, onSuccess, editingProduct }) {
                 </button>
               </div>
             ))}
+            
+            <div style={{ marginTop: '16px' }}>
+              <button type="button" className="btn-secondary" onClick={() => {
+                const baseCode = formData.internal_code || `SKU-${Date.now().toString(36).toUpperCase()}`;
+                const newSku = { 
+                  sku_code: `${baseCode}-${String(formData.skus.length + 1).padStart(2, '0')}`, 
+                  variant_name: '', 
+                  mrp: 0, selling_price: 0, purchase_cost: 0, 
+                  gst_percent: 18, reorder_level: 10, maximum_stock: 100, safety_stock: 5, 
+                  stock_adjustment: 0, current_stock: 0, barcode: '', weight: '', length: '', width: '', height: '' 
+                };
+                setFormData({ ...formData, skus: [...formData.skus, newSku] });
+              }}>+ Add Variant Manually</button>
+            </div>
           </div>
         )}
 
