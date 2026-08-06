@@ -28,17 +28,17 @@ export default function HomePage() {
 
   const { data: categoriesList = [], isLoading: isLoadingCats } = useQuery({
     queryKey: ['categories'],
-    staleTime: 1000 * 60 * 5, // 5 minutes cache
+    staleTime: 1000 * 60 * 60, // 1 hour — categories rarely change
     queryFn: async () => {
       const { data, error } = await supabase.from('categories').select('*').is('deleted_at', null).eq('is_active', true);
       if (error) { console.error('Categories Error:', error); throw error; }
-      return (data || []).map(c => ({ ...c, title: c.name }));
+      return (data || []).map(c => ({ ...c, title: c.name, image_url: c.image || c.image_url }));
     }
   });
 
   const { data: concernsList = [] } = useQuery({
     queryKey: ['concerns'],
-    staleTime: 1000 * 60 * 5, // 5 minutes cache
+    staleTime: 1000 * 60 * 60, // 1 hour
     queryFn: async () => {
       const { data, error } = await supabase.from('concerns').select('*').eq('is_active', true);
       if (error) { console.error('Concerns Error:', error); throw error; }
@@ -81,9 +81,9 @@ export default function HomePage() {
         .select('*, categories(name), skus(id, selling_price, mrp, inventory(quantity_available))')
         .eq('is_active', true)
         .limit(24);
-      
+
       if (error) { console.error('Products Error:', error); throw error; }
-      
+
       const processed = (data || []).map(p => {
         const price = p.skus && p.skus.length > 0 ? Number(p.skus[0].selling_price) : 0;
         const mrp = p.skus && p.skus.length > 0 ? Number(p.skus[0].mrp) : 0;
@@ -189,7 +189,7 @@ export default function HomePage() {
   };
 
   // Autoplay Hero Banner Effect
-  
+
   useEffect(() => {
     if (currentPage === "home") {
       startAutoplay();
@@ -238,7 +238,7 @@ export default function HomePage() {
   useEffect(() => {
     if (length <= 1) return;
     let timeoutId;
-    
+
     if (visualIndex === 0) {
       timeoutId = setTimeout(() => {
         setIsTransitioning(false);
@@ -256,7 +256,7 @@ export default function HomePage() {
         isSliderAnimating.current = false;
       }, 600);
     }
-    
+
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
@@ -300,9 +300,9 @@ export default function HomePage() {
       {activeBanners.length > 0 && (
         <section className="hero-banner-section" onMouseEnter={stopAutoplay} onMouseLeave={startAutoplay}>
           <div className="hero-slider">
-            <div 
-              className="hero-slider-track" 
-              style={{ 
+            <div
+              className="hero-slider-track"
+              style={{
                 width: `${extendedBanners.length * 100}%`,
                 transform: `translateX(-${(length > 1 ? visualIndex : 0) * (100 / extendedBanners.length)}%)`,
                 transition: isTransitioning ? 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)' : 'none'
@@ -529,7 +529,7 @@ export default function HomePage() {
           </div>
           <button className="tabs-arrow right-arrow" onClick={() => handleTabsScroll('right')}><ArrowIcon direction="right" /></button>
         </div>
-        
+
         <div className="products-slider-container">
           {(() => {
             const currentTab = groupedProducts[activeBestSellersTab] ? activeBestSellersTab : Object.keys(groupedProducts)[0];

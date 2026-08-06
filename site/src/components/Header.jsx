@@ -143,7 +143,7 @@ export default function Header() {
     queryKey: ['categories'],
     queryFn: async () => {
       const { data } = await supabase.from('categories').select('*').is('deleted_at', null).eq('is_active', true);
-      return (data || []).map(c => ({ ...c, title: c.name }));
+      return (data || []).map(c => ({ ...c, title: c.name, image_url: c.image || c.image_url }));
     }
   });
 

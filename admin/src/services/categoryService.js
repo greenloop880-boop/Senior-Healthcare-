@@ -9,7 +9,7 @@ export const categoryService = {
       .order('name', { ascending: true });
     
     if (error) throw error;
-    return data;
+    return (data || []).map(cat => ({ ...cat, image_url: cat.image || cat.image_url }));
   },
 
   async createCategory(category) {
