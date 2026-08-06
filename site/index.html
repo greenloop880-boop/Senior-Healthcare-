@@ -28,6 +28,27 @@
       margin: 0;
       font-family: 'Inter', sans-serif;
     }
+    
+    /* Pre-hydration loader style */
+    #root:empty {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #FAFAFA;
+    }
+    #root:empty::after {
+      content: "";
+      width: 40px;
+      height: 40px;
+      border: 4px solid #E5E7EB;
+      border-top-color: #EF4444; /* Primary Red */
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 

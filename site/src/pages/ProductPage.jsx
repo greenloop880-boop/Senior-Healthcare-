@@ -4,10 +4,6 @@ import { ChevronDownIcon, StarIcon, UserIcon, CloseIcon } from '../components/Ic
 import { useAppContext } from '../context/AppContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../config/supabaseClient';
-import banner1 from '../assets/feature_banner_1.avif';
-import banner2 from '../assets/feature_banner_2.avif';
-import banner3 from '../assets/feature_banner_3.avif';
-import banner4 from '../assets/feature_banner_4.avif';
 
 const getCategoryDetails = (category, title) => {
   const cat = (category || "").toLowerCase();
@@ -609,9 +605,7 @@ export default function ProductPage() {
       {/* Promotional Banners */}
       {(() => {
         const dbBanners = prod.metadata?.detail_banners || [];
-        const detailBanners = (dbBanners.filter(url => url && url.trim() !== '').length > 0)
-          ? dbBanners.filter(url => url && url.trim() !== '')
-          : [banner1, banner2, banner3, banner4];
+        const detailBanners = dbBanners.filter(url => url && url.trim() !== '');
         
         return detailBanners.length > 0 && (
           <div className="feature-banners-section" style={{ marginTop: '24px', marginBottom: '24px' }}>

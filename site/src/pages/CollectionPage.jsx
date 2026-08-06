@@ -42,6 +42,7 @@ export default function CollectionPage() {
   // Fetch all active products
   const { data: allProductsList = [], isLoading } = useQuery({
     queryKey: ['allProducts'],
+    staleTime: 1000 * 60 * 30, // 30 minutes cache to make opening instant
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
@@ -409,13 +410,18 @@ export default function CollectionPage() {
             </div>
           ) : paginatedList.length > 0 ? (
             <div ref={productGridRef} className="products-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-              {paginatedList.map(prod => (
+              {paginatedList.map((prod, idx) => (
                 <div className="product-card" key={prod.id}>
                   <div
                     className="product-card-img-wrapper"
                     onClick={() => navigateTo('product-detail', { productId: prod.id })}
                   >
-                    <img src={prod.image_url} alt={prod.title} loading="lazy" />
+                    <img 
+                      src={prod.image_url} 
+                      alt={prod.title} 
+                      loading={idx < 6 ? "eager" : "lazy"}
+                      fetchpriority={idx < 3 ? "high" : "auto"}
+                    />
                     {prod.id === 'wheelassist-lite' && (
                       <div className="warranty-badge-1 desktop-hide">
                         <span>1</span>

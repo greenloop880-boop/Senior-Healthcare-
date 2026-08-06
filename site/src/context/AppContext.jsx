@@ -1,4 +1,4 @@
-import React, { createContext, useState, useRef, useContext, useEffect } from 'react';
+import React, { createContext, useState, useRef, useContext, useLayoutEffect } from 'react';
 import { supabase } from '../config/supabaseClient';
 import Fuse from 'fuse.js';
 
@@ -27,9 +27,18 @@ export const AppProvider = ({ children }) => {
   const [currentPage, setCurrentPage] = useState(() => getInitialRoute().pageName);
   const [currentPageParams, setCurrentPageParams] = useState(() => getInitialRoute().params);
 
-  // Mark app as ready after first mount to prevent flash of content
-  useEffect(() => {
-    setIsAppReady(true);
+  // Delay ready state slightly to prevent FOUC (Flash of Unstyled Content)
+  // on slower mobile devices while Vite dynamically injects and parses CSS.
+  useLayoutEffect(() => {
+    const setReady = () => setIsAppReady(true);
+    if (document.readyState === 'complete') {
+      setTimeout(setReady, 50);
+    } else {
+      window.addEventListener('load', setReady);
+      // Fallback timeout in case load event takes too long
+      setTimeout(setReady, 300);
+    }
+    return () => window.removeEventListener('load', setReady);
   }, []);
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
 

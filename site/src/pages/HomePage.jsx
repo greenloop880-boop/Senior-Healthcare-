@@ -18,6 +18,7 @@ export default function HomePage() {
 
   const { data: heroBanners = [], isLoading: isLoadingHero } = useQuery({
     queryKey: ['heroBanners'],
+    staleTime: 1000 * 60 * 30, // 30 min cache
     queryFn: async () => {
       const { data, error } = await supabase.from('hero_banners').select('*').order('id');
       if (error) { console.error('Hero Error:', error); throw error; }
@@ -74,6 +75,7 @@ export default function HomePage() {
 
   const { data: homepageProducts = {}, isLoading: isLoadingProducts } = useQuery({
     queryKey: ['homepageProducts'],
+    staleTime: 1000 * 60 * 30, // 30 min cache
     queryFn: async () => {
       const { data, error } = await supabase.from('products')
         .select('*, categories(name), skus(id, selling_price, mrp, inventory(quantity_available))')
@@ -382,7 +384,7 @@ export default function HomePage() {
               }}
             >
               <div className="concern-image-wrapper">
-                <img src={concern.image_url} alt={concern.title} loading="lazy" />
+                <img src={concern.image_url} alt={concern.title} loading="eager" />
               </div>
               <div className="concern-title-box">
                 <h3 className="concern-title">{concern.title}</h3>
