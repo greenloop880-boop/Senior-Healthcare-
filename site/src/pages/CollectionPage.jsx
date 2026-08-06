@@ -84,7 +84,7 @@ export default function CollectionPage() {
   // Fetch concerns
   const { data: concernsList = [] } = useQuery({
     queryKey: ['concerns'],
-    staleTime: 1000 * 60 * 60, // 1 hour
+    staleTime: 1000 * 60 * 5, // 5 minutes cache
     queryFn: async () => {
       const { data, error } = await supabase
         .from('concerns')
@@ -99,7 +99,7 @@ export default function CollectionPage() {
   // Fetch categories
   const { data: categoriesList = [] } = useQuery({
     queryKey: ['categories'],
-    staleTime: 1000 * 60 * 60, // 1 hour
+    staleTime: 1000 * 60 * 5, // 5 minutes cache
     queryFn: async () => {
       const { data, error } = await supabase
         .from('categories')

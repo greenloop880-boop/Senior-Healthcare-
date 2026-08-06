@@ -28,7 +28,7 @@ export default function HomePage() {
 
   const { data: categoriesList = [], isLoading: isLoadingCats } = useQuery({
     queryKey: ['categories'],
-    staleTime: 1000 * 60 * 60, // 1 hour — categories rarely change
+    staleTime: 1000 * 60 * 5, // 5 minutes cache
     queryFn: async () => {
       const { data, error } = await supabase.from('categories').select('*').is('deleted_at', null).eq('is_active', true);
       if (error) { console.error('Categories Error:', error); throw error; }
@@ -38,7 +38,7 @@ export default function HomePage() {
 
   const { data: concernsList = [] } = useQuery({
     queryKey: ['concerns'],
-    staleTime: 1000 * 60 * 60, // 1 hour
+    staleTime: 1000 * 60 * 5, // 5 minutes cache
     queryFn: async () => {
       const { data, error } = await supabase.from('concerns').select('*').eq('is_active', true);
       if (error) { console.error('Concerns Error:', error); throw error; }
