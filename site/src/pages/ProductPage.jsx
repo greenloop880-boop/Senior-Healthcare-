@@ -235,23 +235,31 @@ export default function ProductPage() {
   }
 
   const [qty, setQty] = useState(1);
-  const [selectedSku, setSelectedSku] = useState(null);
+  const [selectedSkuCode, setSelectedSkuCode] = useState(null);
   const [pincode, setPincode] = useState("");
   const [activeImage, setActiveImage] = useState(0);
   const [openAccordion, setOpenAccordion] = useState(null);
 
-  useEffect(() => {
-    if (prod && prod.skus && prod.skus.length > 0) {
-      if (!selectedSku || !prod.skus.find(s => s.sku_code === selectedSku.sku_code)) {
-        setSelectedSku(prod.skus[0]);
-      }
-    } else {
-      setSelectedSku(null);
+  // Derive selectedSku inline so it's never null on first render (avoids "Out of Stock" flash)
+  const selectedSku = (() => {
+    if (!prod?.skus || prod.skus.length === 0) return null;
+    if (selectedSkuCode) {
+      const found = prod.skus.find(s => s.sku_code === selectedSkuCode);
+      if (found) return found;
     }
-  }, [prod, selectedSku]);
+    return prod.skus[0];
+  })();
 
-  const currentStock = selectedSku?.inventory ? (Array.isArray(selectedSku.inventory) ? selectedSku.inventory.reduce((acc, inv) => acc + (inv.quantity_available || 0), 0) : (selectedSku.inventory.quantity_available || 0)) : 0;
-  const isOutOfStock = currentStock <= 0;
+  const setSelectedSku = (sku) => setSelectedSkuCode(sku?.sku_code || null);
+
+  // Only mark out-of-stock when inventory data has actually loaded (inventory key exists on the sku)
+  const inventoryLoaded = selectedSku && 'inventory' in selectedSku;
+  const currentStock = selectedSku?.inventory
+    ? (Array.isArray(selectedSku.inventory)
+        ? selectedSku.inventory.reduce((acc, inv) => acc + (inv.quantity_available || 0), 0)
+        : (selectedSku.inventory.quantity_available || 0))
+    : 0;
+  const isOutOfStock = inventoryLoaded && currentStock <= 0;
 
   if (isLoading) {
     return (

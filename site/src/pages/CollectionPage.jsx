@@ -22,8 +22,10 @@ export default function CollectionPage() {
   const [minPrice, setMinPrice] = useState(ABS_MIN);
   const [maxPrice, setMaxPrice] = useState(ABS_MAX);
   const [selectedAvailability, setSelectedAvailability] = useState('All Products');
-  const [visibleCount, setVisibleCount] = useState(12);
+  const ITEMS_PER_PAGE = 12;
+  const [currentPage, setCurrentPage] = useState(1);
   const [showBottomPill, setShowBottomPill] = useState(true);
+  const productGridRef = React.useRef(null);
 
   // Hide pill when near footer (bottom of page)
   useEffect(() => {
@@ -81,6 +83,7 @@ export default function CollectionPage() {
   // Fetch concerns
   const { data: concernsList = [] } = useQuery({
     queryKey: ['concerns'],
+    staleTime: 1000 * 60 * 60, // 1 hour
     queryFn: async () => {
       const { data, error } = await supabase
         .from('concerns')
@@ -95,6 +98,7 @@ export default function CollectionPage() {
   // Fetch categories
   const { data: categoriesList = [] } = useQuery({
     queryKey: ['categories'],
+    staleTime: 1000 * 60 * 60, // 1 hour
     queryFn: async () => {
       const { data, error } = await supabase
         .from('categories')
@@ -118,8 +122,8 @@ export default function CollectionPage() {
 
   // Reset pagination when filter criteria change
   React.useEffect(() => {
-    setVisibleCount(12);
-  }, [selectedFilterCats, selectedFilterConcerns, minPrice, maxPrice, selectedAvailability, searchVal]);
+    setCurrentPage(1);
+  }, [selectedFilterCats, selectedFilterConcerns, minPrice, maxPrice, selectedAvailability, searchVal, catalogSort]);
 
   // Generate filtered list
   let list = useMemo(() => {
@@ -182,11 +186,21 @@ export default function CollectionPage() {
     return filtered;
   }, [allProductsList, selectedFilterCats, selectedFilterConcerns, minPrice, maxPrice, selectedAvailability, searchVal, catalogSort]);
 
+  const totalPages = Math.max(1, Math.ceil(list.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
   const paginatedList = useMemo(() => {
-    return list.slice(0, visibleCount);
-  }, [list, visibleCount]);
+    const start = (safePage - 1) * ITEMS_PER_PAGE;
+    return list.slice(start, start + ITEMS_PER_PAGE);
+  }, [list, safePage]);
 
-  const hasNextPage = list.length > visibleCount;
+  const goToPage = (page) => {
+    setCurrentPage(page);
+    if (productGridRef.current) {
+      productGridRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   const toggleCatFilter = (catName) => {
     setSelectedFilterCats(prev =>
@@ -217,9 +231,6 @@ export default function CollectionPage() {
     setSearchVal("");
   };
 
-  const handleLoadMore = () => {
-    setVisibleCount(prev => prev + 12);
-  };
 
   return (
     <div className="section-container animate-fade" style={{ paddingTop: '10px' }}>
@@ -397,7 +408,7 @@ export default function CollectionPage() {
               ))}
             </div>
           ) : paginatedList.length > 0 ? (
-            <div className="products-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+            <div ref={productGridRef} className="products-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
               {paginatedList.map(prod => (
                 <div className="product-card" key={prod.id}>
                   <div
@@ -494,11 +505,72 @@ export default function CollectionPage() {
             </div>
           )}
 
-          {hasNextPage && (
-            <div style={{ textAlign: 'center', marginTop: '40px' }}>
-              <button className="btn-secondary" onClick={handleLoadMore}>
-                Load More Products
-              </button>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', marginTop: '32px', marginBottom: '32px', flexWrap: 'wrap' }}>
+              {/* Prev */}
+              <button
+                onClick={() => goToPage(safePage - 1)}
+                disabled={safePage <= 1}
+                style={{
+                  width: '38px', height: '38px', borderRadius: '50%',
+                  border: '1.5px solid #d1d5db', background: '#fff',
+                  cursor: safePage <= 1 ? 'not-allowed' : 'pointer',
+                  opacity: safePage <= 1 ? 0.4 : 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '16px', color: '#374151', transition: 'all 0.2s'
+                }}
+              >‹</button>
+
+              {/* Page numbers */}
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                .reduce((acc, p, idx, arr) => {
+                  if (idx > 0 && p - arr[idx - 1] > 1) acc.push('...');
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, idx) =>
+                  p === '...' ? (
+                    <span key={`ellipsis-${idx}`} style={{ padding: '0 4px', color: '#9ca3af', fontSize: '14px' }}>…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => goToPage(p)}
+                      style={{
+                        width: '38px', height: '38px', borderRadius: '50%',
+                        border: p === safePage ? 'none' : '1.5px solid #d1d5db',
+                        background: p === safePage ? 'var(--primary-dark, #2F3966)' : '#fff',
+                        color: p === safePage ? '#fff' : '#374151',
+                        fontWeight: p === safePage ? '700' : '500',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        transition: 'all 0.2s',
+                        boxShadow: p === safePage ? '0 2px 8px rgba(47,57,102,0.25)' : 'none'
+                      }}
+                    >{p}</button>
+                  )
+                )
+              }
+
+              {/* Next */}
+              <button
+                onClick={() => goToPage(safePage + 1)}
+                disabled={safePage >= totalPages}
+                style={{
+                  width: '38px', height: '38px', borderRadius: '50%',
+                  border: '1.5px solid #d1d5db', background: '#fff',
+                  cursor: safePage >= totalPages ? 'not-allowed' : 'pointer',
+                  opacity: safePage >= totalPages ? 0.4 : 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '16px', color: '#374151', transition: 'all 0.2s'
+                }}
+              >›</button>
+
+              {/* Page info */}
+              <span style={{ marginLeft: '8px', fontSize: '13px', color: '#9ca3af' }}>
+                Page {safePage} of {totalPages}
+              </span>
             </div>
           )}
         </main>

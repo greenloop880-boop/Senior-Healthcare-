@@ -4,7 +4,7 @@ import { supabase } from '../config/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 
 import { useAppContext } from '../context/AppContext';
-import logoImg from '../assets/logo.png';
+import logoImg from '../assets/logo.webp';
 
 export default function Header() {
   const {

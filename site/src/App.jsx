@@ -10,10 +10,9 @@ import CheckoutModal from './components/CheckoutModal';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import HomePage from './pages/HomePage';
-import CollectionPage from './pages/CollectionPage';
-import ProductPage from './pages/ProductPage';
-
+const HomePage = React.lazy(() => import('./pages/HomePage'));
+const CollectionPage = React.lazy(() => import('./pages/CollectionPage'));
+const ProductPage = React.lazy(() => import('./pages/ProductPage'));
 const AboutPage = React.lazy(() => import('./pages/AboutPage'));
 const PolicyPage = React.lazy(() => import('./pages/PolicyPage'));
 const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
@@ -24,7 +23,9 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 60 * 10, // 10 minutes – reduces redundant re-fetches
+      gcTime: 1000 * 60 * 30,    // keep cache for 30 min
+      retry: 1,                   // only 1 retry on failure
     },
   },
 });
@@ -47,13 +48,10 @@ function AppContent() {
       {/* Spacer so content doesn't hide under fixed header */}
       <div className="header-spacer" />
 
-      {/* DYNAMIC PAGE ROUTER MOUNT */}
-      {/* DYNAMIC PAGE ROUTER MOUNT */}
-      {currentPage === "home" && <HomePage />}
-      {currentPage === "collection" && <CollectionPage />}
-      {currentPage === "product-detail" && <ProductPage />}
-      
       <React.Suspense fallback={<div style={{ padding: '100px 0', textAlign: 'center', minHeight: '60vh' }}>Loading...</div>}>
+        {currentPage === "home" && <HomePage />}
+        {currentPage === "collection" && <CollectionPage />}
+        {currentPage === "product-detail" && <ProductPage />}
         {currentPage === "about" && <AboutPage />}
         {currentPage === "policy" && <PolicyPage />}
         {currentPage === "profile" && <ProfilePage />}

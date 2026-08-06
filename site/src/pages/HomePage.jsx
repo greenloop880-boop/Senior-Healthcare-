@@ -4,7 +4,7 @@ import { IMAGES, COMMUNITY_VIDEOS, PREMIUM_CUSTOMER_REVIEWS } from '../config/im
 import { useAppContext } from '../context/AppContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../config/supabaseClient';
-import expertBanner from '../assets/expert banner.png';
+import expertBanner from '../assets/expert_banner.webp';
 
 export default function HomePage() {
   const {
@@ -27,6 +27,7 @@ export default function HomePage() {
 
   const { data: categoriesList = [], isLoading: isLoadingCats } = useQuery({
     queryKey: ['categories'],
+    staleTime: 1000 * 60 * 60, // 1 hour — categories rarely change
     queryFn: async () => {
       const { data, error } = await supabase.from('categories').select('*').is('deleted_at', null).eq('is_active', true);
       if (error) { console.error('Categories Error:', error); throw error; }
@@ -36,6 +37,7 @@ export default function HomePage() {
 
   const { data: concernsList = [] } = useQuery({
     queryKey: ['concerns'],
+    staleTime: 1000 * 60 * 60, // 1 hour
     queryFn: async () => {
       const { data, error } = await supabase.from('concerns').select('*').eq('is_active', true);
       if (error) { console.error('Concerns Error:', error); throw error; }
@@ -45,6 +47,7 @@ export default function HomePage() {
 
   const { data: healthReviews = [] } = useQuery({
     queryKey: ['healthReviews'],
+    staleTime: 1000 * 60 * 30, // 30 min
     queryFn: async () => {
       const { data } = await supabase.from('health_reviews').select('*').order('id');
       return data || [];
@@ -53,6 +56,7 @@ export default function HomePage() {
 
   const { data: communityVideos = [] } = useQuery({
     queryKey: ['communityVideos'],
+    staleTime: 1000 * 60 * 30, // 30 min
     queryFn: async () => {
       const { data } = await supabase.from('community_videos').select('*');
       return data || [];
@@ -61,6 +65,7 @@ export default function HomePage() {
 
   const { data: customerReviews = [] } = useQuery({
     queryKey: ['customerReviews'],
+    staleTime: 1000 * 60 * 30, // 30 min
     queryFn: async () => {
       const { data } = await supabase.from('customer_reviews').select('*').order('id');
       return data || [];
