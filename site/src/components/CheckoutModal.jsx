@@ -257,7 +257,8 @@ export default function CheckoutModal() {
     setIsProcessing(true);
     try {
       if (!userSession) {
-        showToast("Please log in to place an order.");
+        setIsCheckoutModalOpen(false);
+        navigateTo('profile');
         setIsProcessing(false);
         return;
       }
