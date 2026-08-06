@@ -61,7 +61,7 @@ export default function CheckoutModal() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         setIsCheckoutModalOpen(false);
-        navigateTo('profile'); 
+        setIsSignInModalOpen(true);
         return;
       }
       setUserSession(session);
