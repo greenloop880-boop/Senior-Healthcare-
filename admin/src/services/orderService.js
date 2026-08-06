@@ -115,22 +115,38 @@ export const orderService = {
     const { data: existing } = await supabase.from('shipments').select('id').eq('order_id', orderId).maybeSingle();
     
     if (existing) {
-      await supabase.from('shipments').update({
+      const { error } = await supabase.from('shipments').update({
         tracking_number: trackingNumber,
         status: 'SHIPPED',
         courier_name: courier
       }).eq('id', existing.id);
+      if (error) throw error;
     } else {
-      await supabase.from('shipments').insert({
+      const { error } = await supabase.from('shipments').insert({
         order_id: orderId,
         status: 'SHIPPED',
         tracking_number: trackingNumber,
         courier_name: courier
       });
+      if (error) throw error;
     }
     
-    // Also update order status
-    await this.updateOrderStatus(orderId, 'SHIPPED');
+    // Update order status directly — do NOT call updateOrderStatus() as it would re-push to Shiprocket
+    const { error: orderError } = await supabase
+      .from('orders')
+      .update({ status: 'SHIPPED' })
+      .eq('id', orderId);
+    if (orderError) throw orderError;
+  },
+
+  async syncShiprocketTracking(orderId) {
+    // Call our edge function to pull tracking from Shiprocket and update shipments table
+    const { data, error } = await supabase.functions.invoke('shiprocket', {
+      body: { action: 'sync_tracking', order_id: orderId }
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data;
   },
 
   async getInventoryInsights() {

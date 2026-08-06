@@ -31,7 +31,7 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
-  const { currentPage, toastMessage } = useAppContext();
+  const { currentPage, toastMessage, isAppReady } = useAppContext();
 
   return (
     <div className="app-wrapper">
@@ -48,15 +48,15 @@ function AppContent() {
       {/* Spacer so content doesn't hide under fixed header */}
       <div className="header-spacer" />
 
-      <React.Suspense fallback={<div style={{ padding: '100px 0', textAlign: 'center', minHeight: '60vh' }}>Loading...</div>}>
-        {currentPage === "home" && <HomePage />}
-        {currentPage === "collection" && <CollectionPage />}
-        {currentPage === "product-detail" && <ProductPage />}
-        {currentPage === "about" && <AboutPage />}
-        {currentPage === "policy" && <PolicyPage />}
-        {currentPage === "profile" && <ProfilePage />}
-        {currentPage === "search" && <SearchPage />}
-        {currentPage === "order-success" && <OrderSuccessPage />}
+      <React.Suspense fallback={<div style={{ padding: '100px 0', textAlign: 'center', minHeight: '60vh' }} />}>
+        {isAppReady && currentPage === "home" && <HomePage />}
+        {isAppReady && currentPage === "collection" && <CollectionPage />}
+        {isAppReady && currentPage === "product-detail" && <ProductPage />}
+        {isAppReady && currentPage === "about" && <AboutPage />}
+        {isAppReady && currentPage === "policy" && <PolicyPage />}
+        {isAppReady && currentPage === "profile" && <ProfilePage />}
+        {isAppReady && currentPage === "search" && <SearchPage />}
+        {isAppReady && currentPage === "order-success" && <OrderSuccessPage />}
       </React.Suspense>
 
       <Footer />

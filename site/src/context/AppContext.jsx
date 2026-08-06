@@ -1,4 +1,4 @@
-import React, { createContext, useState, useRef, useContext } from 'react';
+import React, { createContext, useState, useRef, useContext, useEffect } from 'react';
 import { supabase } from '../config/supabaseClient';
 import Fuse from 'fuse.js';
 
@@ -23,8 +23,14 @@ const getInitialRoute = () => {
 };
 
 export const AppProvider = ({ children }) => {
+  const [isAppReady, setIsAppReady] = useState(false);
   const [currentPage, setCurrentPage] = useState(() => getInitialRoute().pageName);
   const [currentPageParams, setCurrentPageParams] = useState(() => getInitialRoute().params);
+
+  // Mark app as ready after first mount to prevent flash of content
+  useEffect(() => {
+    setIsAppReady(true);
+  }, []);
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
 
   
@@ -360,6 +366,7 @@ export const AppProvider = ({ children }) => {
   const grandTotal = subtotal - discountAmount + deliveryCharges;
 
   const value = {
+    isAppReady,
     currentPage, setCurrentPage,
     currentPageParams, setCurrentPageParams,
     cart, setCart,

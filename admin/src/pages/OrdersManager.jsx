@@ -19,6 +19,7 @@ export default function OrdersManager() {
   // Input states per order
   const [shippingInputs, setShippingInputs] = useState({});
   const [shippingStatus, setShippingStatus] = useState({});
+  const [syncStatus, setSyncStatus] = useState({}); // 'syncing' | 'done' | 'error' | null
 
   // Modal State for deeper details
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -60,14 +61,14 @@ export default function OrdersManager() {
       if (result) {
         const initialShipping = {};
         result.forEach(order => {
-          if (order.shipments && order.shipments.length > 0) {
-            initialShipping[order.id] = {
-              courier: order.shipments[0].courier_name || '',
-              tracking: order.shipments[0].tracking_number || ''
-            };
-          }
+          // Always pre-fill inputs from saved shipment data
+          const shipment = order.shipments?.[0];
+          initialShipping[order.id] = {
+            courier: shipment?.courier_name || '',
+            tracking: shipment?.tracking_number || ''
+          };
         });
-        setShippingInputs(prev => ({ ...prev, ...initialShipping }));
+        setShippingInputs(initialShipping);
       }
       
     } catch (err) {
@@ -100,16 +101,42 @@ export default function OrdersManager() {
   const handleShip = async (orderId) => {
     const inputs = shippingInputs[orderId] || {};
     if (!inputs.courier || !inputs.tracking) {
-      alert("Please enter Courier and Tracking Number before saving.");
+      alert("Please enter Courier name and Tracking Number before saving.");
       return;
     }
     
     try {
       await orderService.addShipment(orderId, inputs.tracking, inputs.courier);
-      alert("Tracking information saved successfully!");
+      alert("✅ Tracking information saved successfully!");
       await loadData();
     } catch (err) {
       alert("Failed to save shipping info: " + err.message);
+    }
+  };
+
+  const handleSyncSR = async (orderId) => {
+    setSyncStatus(prev => ({ ...prev, [orderId]: 'syncing' }));
+    try {
+      const result = await orderService.syncShiprocketTracking(orderId);
+      if (result?.success && result?.synced) {
+        const { awb, courierName, dbStatus } = result.synced;
+        // Update local input state immediately
+        setShippingInputs(prev => ({
+          ...prev,
+          [orderId]: { courier: courierName || '', tracking: awb || '' }
+        }));
+        setSyncStatus(prev => ({ ...prev, [orderId]: 'done' }));
+        setTimeout(() => setSyncStatus(prev => ({ ...prev, [orderId]: null })), 3000);
+        await loadData();
+      } else {
+        setSyncStatus(prev => ({ ...prev, [orderId]: 'error' }));
+        setTimeout(() => setSyncStatus(prev => ({ ...prev, [orderId]: null })), 4000);
+        alert(result?.message || "No tracking data found in Shiprocket yet. Try again after courier assigns AWB.");
+      }
+    } catch (err) {
+      setSyncStatus(prev => ({ ...prev, [orderId]: 'error' }));
+      setTimeout(() => setSyncStatus(prev => ({ ...prev, [orderId]: null })), 4000);
+      alert("Sync failed: " + err.message);
     }
   };
 
@@ -334,21 +361,64 @@ export default function OrdersManager() {
                       
                       {/* Shipping Inputs Row */}
                       <div className="om-shipping-row">
+                        {/* Show saved shipment info if exists */}
+                        {order.shipments?.[0] && (
+                          <div style={{ 
+                            width: '100%', 
+                            padding: '8px 12px', 
+                            background: '#F0FDF4', 
+                            border: '1px solid #BBF7D0', 
+                            borderRadius: '8px', 
+                            marginBottom: '8px',
+                            fontSize: '13px',
+                            color: '#166534',
+                            display: 'flex',
+                            gap: '16px',
+                            flexWrap: 'wrap',
+                            alignItems: 'center'
+                          }}>
+                            <span>✅ <strong>Saved:</strong></span>
+                            {order.shipments[0].courier_name && (
+                              <span>🚚 Courier: <strong>{order.shipments[0].courier_name}</strong></span>
+                            )}
+                            {order.shipments[0].tracking_number && (
+                              <span>📦 AWB/Tracking: <strong style={{ fontFamily: 'monospace' }}>{order.shipments[0].tracking_number}</strong></span>
+                            )}
+                            <span style={{ color: '#374151' }}>Status: <strong>{order.shipments[0].status}</strong></span>
+                          </div>
+                        )}
                         <input 
                           type="text" 
-                          placeholder="Courier (e.g. FedEx)" 
+                          placeholder="Courier (e.g. Delhivery, FedEx)" 
                           className="om-shipping-input"
                           value={shippingInputs[order.id]?.courier || ''}
                           onChange={(e) => updateShippingInput(order.id, 'courier', e.target.value)}
                         />
                         <input 
                           type="text" 
-                          placeholder="Tracking #" 
+                          placeholder="Tracking # / AWB" 
                           className="om-shipping-input"
                           value={shippingInputs[order.id]?.tracking || ''}
                           onChange={(e) => updateShippingInput(order.id, 'tracking', e.target.value)}
                         />
                         <button className="om-btn-save" onClick={() => handleShip(order.id)}>Save</button>
+                        <button 
+                          className="om-btn-ship-action"
+                          style={{ 
+                            minWidth: '100px',
+                            fontSize: '12px',
+                            backgroundColor: syncStatus[order.id] === 'done' ? '#10B981' : syncStatus[order.id] === 'error' ? '#EF4444' : '#6366F1',
+                            opacity: syncStatus[order.id] === 'syncing' ? 0.7 : 1
+                          }}
+                          disabled={syncStatus[order.id] === 'syncing'}
+                          onClick={() => handleSyncSR(order.id)}
+                          title="Fetch latest tracking details from Shiprocket"
+                        >
+                          {syncStatus[order.id] === 'syncing' ? '⏳ Syncing...' 
+                            : syncStatus[order.id] === 'done' ? '✅ Synced!' 
+                            : syncStatus[order.id] === 'error' ? '❌ Failed'
+                            : '🔄 Sync SR'}
+                        </button>
                         <button className="om-btn-view-details" onClick={() => handleViewDetails(order.id)}>Full Details</button>
                       </div>
                     </div>

@@ -213,6 +213,37 @@ export default function TrackOrder({ initialOrderId = '' }) {
               </div>
           )}
 
+          {/* Shipment / Courier Details */}
+          {orderData.shipments?.[0] && (orderData.shipments[0].courier_name || orderData.shipments[0].tracking_number) && (
+            <div style={{ margin: '0 0 32px', padding: '20px', background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)', borderRadius: '16px', border: '1px solid #BAE6FD' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#0369A1', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                📦 Shipment Details
+              </h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
+                {orderData.shipments[0].courier_name && (
+                  <div style={{ background: '#fff', padding: '12px 16px', borderRadius: '10px', border: '1px solid #E0F2FE' }}>
+                    <div style={{ fontSize: '11px', color: '#64748B', fontWeight: '600', textTransform: 'uppercase', marginBottom: '6px' }}>🚚 Courier Partner</div>
+                    <div style={{ fontSize: '15px', fontWeight: '700', color: '#111827' }}>{orderData.shipments[0].courier_name}</div>
+                  </div>
+                )}
+                {orderData.shipments[0].tracking_number && (
+                  <div style={{ background: '#fff', padding: '12px 16px', borderRadius: '10px', border: '1px solid #E0F2FE' }}>
+                    <div style={{ fontSize: '11px', color: '#64748B', fontWeight: '600', textTransform: 'uppercase', marginBottom: '6px' }}>📋 AWB / Tracking ID</div>
+                    <div style={{ fontSize: '15px', fontWeight: '700', color: '#111827', fontFamily: 'monospace', letterSpacing: '1px' }}>{orderData.shipments[0].tracking_number}</div>
+                    <a 
+                      href={`https://shiprocket.co/tracking/${orderData.shipments[0].tracking_number}`}
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      style={{ display: 'inline-block', marginTop: '8px', fontSize: '12px', color: '#7C3AED', fontWeight: '600', textDecoration: 'none', padding: '4px 10px', background: '#F5F3FF', borderRadius: '6px', border: '1px solid #DDD6FE' }}
+                    >
+                      Track on Shiprocket →
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Order Items */}
           {orderData.order_items && orderData.order_items.length > 0 && (
             <div style={{ marginTop: '40px' }}>

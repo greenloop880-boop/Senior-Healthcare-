@@ -541,7 +541,13 @@ export default function ProfilePage() {
                           {shipment ? (
                             <div className="tracking-info">
                               <strong>Tracking Status:</strong> <span className="tracking-status">{shipment.status}</span>
-                              {shipment.tracking_number && <div>AWB: {shipment.tracking_number}</div>}
+                              {shipment.courier_name && <div style={{ marginTop: '4px' }}>🚚 <strong>Courier:</strong> {shipment.courier_name}</div>}
+                              {shipment.tracking_number && (
+                                <div style={{ marginTop: '4px' }}>
+                                  📋 <strong>AWB:</strong> <span style={{ fontFamily: 'monospace' }}>{shipment.tracking_number}</span>
+                                  {' '}<a href={`https://shiprocket.co/tracking/${shipment.tracking_number}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: '#7C3AED', marginLeft: '8px' }}>Track →</a>
+                                </div>
+                              )}
                             </div>
                           ) : order.status === 'CANCELLED' ? (
                             <div className="tracking-info" style={{ color: 'var(--primary-red)' }}>Order Cancelled</div>
