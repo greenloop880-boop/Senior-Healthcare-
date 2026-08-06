@@ -25,6 +25,7 @@ const getInitialRoute = () => {
 export const AppProvider = ({ children }) => {
   const [currentPage, setCurrentPage] = useState(() => getInitialRoute().pageName);
   const [currentPageParams, setCurrentPageParams] = useState(() => getInitialRoute().params);
+  const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
 
   
   const [userSession, setUserSession] = useState(null);
@@ -388,6 +389,7 @@ export const AppProvider = ({ children }) => {
     selectedFilterConcerns, setSelectedFilterConcerns,
     catalogSort, setCatalogSort,
     isCheckoutModalOpen, setIsCheckoutModalOpen,
+    isSignInModalOpen, setIsSignInModalOpen,
     showCancelAlert, setShowCancelAlert,
     
     

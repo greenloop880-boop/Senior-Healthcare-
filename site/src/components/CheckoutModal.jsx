@@ -9,7 +9,8 @@ export default function CheckoutModal() {
     showCancelAlert, setShowCancelAlert,
     cart,
     removeFromCart, navigateTo, showToast, userProfile,
-    buyNowItem, setBuyNowItem, appliedPromo
+    buyNowItem, setBuyNowItem, appliedPromo,
+    setIsSignInModalOpen
   } = useAppContext();
 
   const checkoutCart = buyNowItem ? [buyNowItem] : cart;
@@ -146,7 +147,7 @@ export default function CheckoutModal() {
 
     if (!userSession) {
       setIsCheckoutModalOpen(false);
-      navigateTo('profile');
+      setIsSignInModalOpen(true);
       return;
     }
 
@@ -258,7 +259,7 @@ export default function CheckoutModal() {
     try {
       if (!userSession) {
         setIsCheckoutModalOpen(false);
-        navigateTo('profile');
+        setIsSignInModalOpen(true);
         setIsProcessing(false);
         return;
       }

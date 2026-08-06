@@ -16,11 +16,11 @@ export default function Header() {
     setHelpFormOpen,
     searchQuery, setSearchQuery,
     currentPage,
-    userSession, showToast
+    userSession, showToast,
+    isSignInModalOpen, setIsSignInModalOpen
   } = useAppContext();
 
   const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
-  const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginOtp, setLoginOtp] = useState('');
   const [loginStep, setLoginStep] = useState('EMAIL'); // 'EMAIL' | 'OTP'
